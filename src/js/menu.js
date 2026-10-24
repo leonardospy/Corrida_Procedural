@@ -63,6 +63,19 @@ export function applyCfg(){
 function renderCfg(){
   const el=$('cfgList');el.innerHTML='';
   CFG_UI.forEach(function(u){
+    if(u.k==='style'){
+      /* gráficos: dois botões lado a lado, no topo da lista */
+      const box=document.createElement('div');box.className='seg';box.setAttribute('role','radiogroup');box.setAttribute('aria-label',u.t);
+      const cap=document.createElement('span');cap.className='seg-cap';cap.textContent='Gráficos';box.appendChild(cap);
+      [['Realista',0],['Desenho',1]].forEach(function(o){
+        const b=document.createElement('button');b.type='button';b.textContent=o[0];b.setAttribute('role','radio');
+        b.setAttribute('aria-checked',String((cfg.style>=0.5?1:0)===o[1]));
+        b.addEventListener('click',function(){const st=$('mcol').scrollTop;cfg.style=o[1];persistCfg();applyCfg();renderCfg();$('mcol').scrollTop=st;});
+        box.appendChild(b);
+      });
+      el.appendChild(box);
+      return;
+    }
     const row=document.createElement('label');row.className='row';
     const nm=document.createElement('span');nm.textContent=u.t;
     const out=document.createElement('output');out.textContent=u.f(cfg[u.k]);

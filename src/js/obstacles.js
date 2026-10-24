@@ -1,6 +1,6 @@
 /* Modelos de obstáculos, animais, cidade e pórticos */
 import {fmt} from './config.js';
-import {M,patch,scene} from './scene.js';
+import {M,patch,pedMats,scene} from './scene.js';
 import {FR,H,PB,PCo,PCy,UB,geo,geoL,tm,wheelS} from './geometry.js';
 import {sedanGeo,truckGeo,vanGeo} from './vehicles.js';
 
@@ -18,33 +18,32 @@ const LOOKS=[
   {skin:0xe8b892,hair:0x2a1d16,pants:0x262a36,shoe:0x15151a,suit:0x262a36,tie:0xb0202a},
   {skin:0x9a6644,hair:0x121010,pants:0x3a3d44,shoe:0x15151a,suit:0x3a3d44,tie:0x2f5fb0,long:true}
 ];
-const limbEnd=(hy,hz,Lh,a)=>[hy-Lh*Math.cos(a),hz-Lh*Math.sin(a)];
+/* modelado em pé; o shader de caminhada gira cada parte (limb) em torno da sua junta:
+   1/2 coxa esq./dir. (quadril y=0.86), 3/4 canela (joelho y=0.46), 5/6 braço (ombro y=1.5), 7/8 antebraço (cotovelo y=1.2) */
+const Lp=(p,limb)=>{p.limb=limb;return p;};
 export function pedGeo(shirt,plain,a,n){
-  a=a||0;const lk=LOOKS[(n||0)%LOOKS.length];
+  const lk=LOOKS[(n||0)%LOOKS.length];
   if(lk.suit)shirt=lk.suit;
   const B=[PB(0.36,0.2,0.24,0,0.9,0,lk.pants),FR(0.38,0.5,0.24,0.27,0.62,0,0.94,0,shirt),
     PB(0.12,0.1,0.12,0,1.6,0,lk.skin),{g:new THREE.IcosahedronGeometry(0.165,1),m:tm(0,1.79,0,1,1.12,1),c:lk.skin},
     {g:new THREE.IcosahedronGeometry(0.175,1),m:tm(0,1.86,0.025,1.04,0.78,1.04),c:lk.hair},
     PB(0.045,0.045,0.02,-0.062,1.8,-0.158,0x1b1b1b),PB(0.045,0.045,0.02,0.062,1.8,-0.158,0x1b1b1b)];
   if(lk.long)B.push(PB(0.32,0.34,0.1,0,1.7,0.13,lk.hair));
-  if(lk.suit){
-    B.push(PB(0.13,0.24,0.02,0,1.4,-0.137,0xf4f4f0),PB(0.05,0.22,0.02,0,1.37,-0.148,lk.tie));
-    const h=limbEnd(1.5,0,0.6,-a*0.8);   /* pasta na mão direita */
-    B.push(PB(0.08,0.26,0.36,0.33,h[0]-0.2,h[1],0x3a2a1e),PB(0.03,0.04,0.12,0.33,h[0]-0.05,h[1],0x1b1b1b));
-  }
+  if(lk.suit)B.push(PB(0.13,0.24,0.02,0,1.4,-0.137,0xf4f4f0),PB(0.05,0.22,0.02,0,1.37,-0.148,lk.tie));
   [-1,1].forEach(function(s){
-    /* perna e sapato */
-    const al=a*s, f=limbEnd(0.86,0,0.8,al);
-    B.push(legB(s*0.105,0.86,0,0.8,0.16,al,lk.pants),{g:UB,m:tm(s*0.105,f[0]+0.04,f[1]-0.06,0.17,0.1,0.3,al,0,0),c:lk.shoe});
-    /* braço e mão (balanço oposto ao da perna do mesmo lado) */
-    const ar=-a*s*0.8, h=limbEnd(1.5,0,0.6,ar);
-    B.push(legB(s*0.3,1.5,0,0.6,0.12,ar,shirt),{g:new THREE.IcosahedronGeometry(0.07,0),m:tm(s*0.3,h[0]-0.03,h[1]),c:lk.skin});
+    const L0=s<0?0:1;
+    /* coxa, canela e sapato */
+    B.push(Lp(PB(0.17,0.42,0.18,s*0.105,0.66,0,lk.pants),1+L0),Lp(PB(0.15,0.42,0.16,s*0.105,0.26,0,lk.pants),3+L0),
+      Lp(PB(0.17,0.1,0.3,s*0.105,0.05,-0.06,lk.shoe),3+L0));
+    /* braço, antebraço e mão */
+    B.push(Lp(PB(0.13,0.32,0.14,s*0.3,1.35,0,shirt),5+L0),Lp(PB(0.11,0.3,0.12,s*0.3,1.05,0,lk.suit?shirt:lk.skin),7+L0),
+      Lp({g:new THREE.IcosahedronGeometry(0.07,0),m:tm(s*0.3,0.86,0),c:lk.skin},7+L0));
+    if(lk.suit&&s>0)B.push(Lp(PB(0.08,0.26,0.36,0.34,0.68,0,0x3a2a1e),8),Lp(PB(0.03,0.05,0.12,0.34,0.83,0,0x1b1b1b),8));   /* pasta */
   });
   /* colete refletivo: só aparece à noite (material de luz) */
   const V=[PB(0.52,0.46,0.3,0,1.24,0,0xcfff2a),PB(0.54,0.06,0.32,0,1.12,0,0xf4f6f8),PB(0.54,0.06,0.32,0,1.32,0,0xf4f6f8)];
   return plain?geo(B):geoL(B,V);
 }
-const pedWalk=(c,n)=>[pedGeo(c,false,0.45,n),pedGeo(c,false,0,n),pedGeo(c,false,-0.45,n),pedGeo(c,false,0,n)];
 export const PEDC=[0xe94f4f,0x4fa3e9,0xe9c84f,0x8a5be9,0x262a36,0x3a3d44];
 /* carreta-rampa: reboque baixo com rampa de subida na traseira (z positivo, virado para o jogador) */
 function rampGeo(c){
@@ -148,15 +147,15 @@ export const OB={
   cones:{kind:'fatal',hw:1.0,hz:0.9,hh:0.95,geos:[conesGeo()]},
   barrels:{kind:'fatal',hw:1.1,hz:1.0,hh:1.0,geos:[barrelsGeo()]},
   barrier:{kind:'fatal',hw:1.4,hz:0.55,hh:1.3,geos:[barrierGeo()]},
-  sedan:{kind:'veh',hw:1.05,hz:2.1,hh:1.45,sg:{x:0.74,y:0.66,zf:-2.12,zr:2.12},geos:[sedanGeo(0x3a7bd5),sedanGeo(0xd8433a),sedanGeo(0x9aa3b2),sedanGeo(0x2a9d6f),sedanGeo(0xf2efe6),sedanGeo(0x26282f),sedanGeo(0x8a1f2a),sedanGeo(0xc9b38a)]},
-  van:{kind:'veh',hw:1.15,hz:2.5,hh:2.0,sg:{x:0.86,y:0.95,zf:-2.36,zr:2.36},geos:[vanGeo(0x2f6fd6,0xf2efe6),vanGeo(0xd8433a,0xf2efe6),vanGeo(0x3e9d6a,0xf2efe6),vanGeo(0xe9b52a,0xf2efe6)]},
-  truck:{kind:'veh',hw:1.3,hz:3.55,hh:3.0,sg:{x:1.0,y:0.95,zf:-3.56,zr:3.56},geos:[truckGeo(0xe9e5da,0x2f6fd6,0xff7a1a),truckGeo(0xff7a1a,0x3a3d4a,0xf2efe6),truckGeo(0x2ec4b6,0xe9e5da,0x2a2d3a)]},
+  sedan:{kind:'veh',hw:0.95,hz:2.25,hh:1.45,sg:{x:0.8,y:0.72,zf:-2.27,zr:2.27},geos:[sedanGeo(0x3a7bd5),sedanGeo(0xd8433a),sedanGeo(0x9aa3b2),sedanGeo(0x2a9d6f),sedanGeo(0xf2efe6),sedanGeo(0x26282f),sedanGeo(0x8a1f2a),sedanGeo(0xc9b38a)]},
+  van:{kind:'veh',hw:1.0,hz:2.25,hh:2.0,sg:{x:0.88,y:1.15,zf:-2.27,zr:2.27},geos:[vanGeo(0x2f6fd6,0xf2efe6),vanGeo(0xd8433a,0xf2efe6),vanGeo(0x3e9d6a,0xf2efe6),vanGeo(0xe9b52a,0xf2efe6)]},
+  truck:{kind:'veh',hw:1.3,hz:3.5,hh:3.0,sg:{x:1.12,y:1.2,zf:-3.52,zr:3.52},geos:[truckGeo(0xe9e5da,0x2f6fd6,0xff7a1a),truckGeo(0xff7a1a,0x3a3d4a,0xf2efe6),truckGeo(0x2ec4b6,0xe9e5da,0x2a2d3a)]},
   crash:{kind:'fatal',hw:2.0,hz:3.4,hh:1.6,geos:[crashGeo(0xd8433a,0x3a7bd5),crashGeo(0x2a9d6f,0xe9b52a)]},
   deer:{kind:'ped',hw:0.5,hz:0.8,hh:2.0,geos:[deerGeo(0)],walkG:[deerGeo(0.55),deerGeo(-0.55)]},
   fox:{kind:'ped',hw:0.4,hz:0.6,hh:1.0,sc:1.8,geos:[foxGeo(0)],walkG:[foxGeo(0.6),foxGeo(-0.6)]},
   rabbit:{kind:'ped',hw:0.35,hz:0.45,hh:0.9,sc:2.2,geos:[rabbitGeo(0)],walkG:[rabbitGeo(0.7),rabbitGeo(-0.7)]},
   ramp:{kind:'ramp',hw:1.2,hz:4.6,hh:0,geos:[rampGeo(0xf2b705),rampGeo(0xff7a1a),rampGeo(0x2ec4b6)]},
-  ped:{kind:'ped',hw:0.45,hz:0.55,hh:2.2,sc:1.2,mats:[M.vcol,M.vest],geos:PEDC.map((c,n)=>pedGeo(c,false,0,n)),walkV:PEDC.map(pedWalk)}
+  ped:{kind:'ped',hw:0.45,hz:0.55,hh:2.2,sc:1.2,matsFn:pedMats,geos:PEDC.map((c,n)=>pedGeo(c,false,0,n))}
 };
 
 /* Pórtico a cada 500 m */

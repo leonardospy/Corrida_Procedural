@@ -6,7 +6,7 @@ import {makeBeacon} from './geometry.js';
 import {OB} from './obstacles.js';
 import {cityCore,cityK,isX} from './track.js';
 import {GJ,coinList,obstacles,pools,wrenchList} from './state.js';
-import {busyAt} from './tunnels.js';
+import {busyAt,underOf} from './tunnels.js';
 
 /* ------------------------------------------------------------------ */
 /* Gerador procedural                                                  */
@@ -16,12 +16,8 @@ export function resetGen(){gen.z=90;gen.safe=1;gen.chic=0;gen.pedZ=260;gen.rampZ
 /* ninguém atravessa ninguém: carros seguem o da frente e quem cruza a pista espera a vez */
 const solid=p=>!p.hit&&p.kind!=='deco'&&p.mesh.visible;
 /* até onde um carro da via pode avançar sem encostar no que está à frente dele */
-/* linha de parada antes da faixa de pedestres: carros da via nunca entram no cruzamento */
-const stopLine=i=>i*L-7.8;
 export function leaderLimit(o){
   let lim=Infinity;
-  const b=Math.floor(o.d/L);
-  for(let i=b;i<=b+5;i++)if(isX(i)&&o.d+o.hz<=stopLine(i)+0.5){lim=Math.min(lim,stopLine(i)-o.hz);break;}
   for(let n=0;n<obstacles.length;n++){
     const p=obstacles[n];
     if(p===o||!solid(p)||p.d<=o.d||Math.abs(p.x-o.x)>=p.hw+o.hw+0.25)continue;
@@ -35,6 +31,21 @@ export function sideBlocked(o,nx){
     const p=obstacles[n];
     if(p===o||!solid(p)||(p.x-o.x)*o.dir<=0)continue;
     if(Math.abs(p.d-o.d)<p.hz+o.hz+0.6&&Math.abs(p.x-nx)<p.hw+o.hw+0.3)return true;
+  }
+  return false;
+}
+/* carro da rua transversal: espera na borda da pista se não der tempo de atravessar antes do jogador
+   chegar (ou se houver carro da via passando); depois de entrar, nunca para no meio */
+export function crossWait(o,nx){
+  const edge=7.4+o.hw, inside=Math.abs(o.x)<edge, willEnter=!inside&&Math.abs(nx)<edge;
+  if(inside)return false;
+  if(sideBlocked(o,nx))return true;
+  if(!willEnter)return false;
+  const tr=(o.d-ST.dist)/Math.max(ST.speed,8), clearT=2*edge/o.vx+0.3;
+  if(tr>-0.4&&tr<clearT+0.4)return true;
+  for(let n=0;n<obstacles.length;n++){
+    const p=obstacles[n];
+    if(p.mv&&!p.hit&&Math.abs(p.d-o.d)<p.hz+o.hz+6)return true;
   }
   return false;
 }
@@ -72,14 +83,18 @@ function spawn(type,d,x,ry){
   const def=OB[type], vi=type==='ped'?pedLook(d):(Math.random()*def.geos.length)|0, key=type+vi;
   const pool=pools[key]||(pools[key]=[]);
   let mesh=pool.pop();
-  if(!mesh){const gm=def.geos[vi];mesh=new THREE.Mesh(gm,def.mats||(gm.groups.length?[M.vcol,M.lights,M.halo]:M.vcol));if(type==='barrier'||type==='crash'){const bc=makeBeacon();if(type==='crash')bc.position.set(0.2,0.55,0.3);mesh.add(bc);mesh.userData.bc=bc.userData.rays;}if(def.sg){const sgm=makeSig(def.sg);mesh.add(sgm.g);mesh.userData.sig=sgm;}scene.add(mesh);}
+  if(!mesh){const gm=def.geos[vi];mesh=new THREE.Mesh(gm,def.matsFn?def.matsFn():def.mats||(gm.groups.length?[M.vcol,M.lights,M.halo]:M.vcol));if(type==='barrier'||type==='crash'){const bc=makeBeacon();if(type==='crash')bc.position.set(0.2,0.55,0.3);mesh.add(bc);mesh.userData.bc=bc.userData.rays;}if(def.sg){const sgm=makeSig(def.sg);mesh.add(sgm.g);mesh.userData.sig=sgm;}
+    /* sombra suave sob os veículos */
+    if(def.kind==='veh'){const sh=new THREE.Mesh(SHADOW,M.blob);sh.scale.set(def.hw*2.1,1,def.hz*2.05);sh.position.y=0.03;mesh.add(sh);}
+    scene.add(mesh);}
   if(mesh.userData.sig)sigSet(mesh.userData.sig,0,false);
+  if(Array.isArray(mesh.material)&&mesh.material[0].userData.walk)mesh.material[0].userData.walk.set(0,0);   /* pedestre reaproveitado começa parado */
   mesh.geometry=def.geos[vi];
   mesh.visible=true;mesh.position.set(x,0,-d);mesh.rotation.set(0,ry||0,0);mesh.scale.setScalar(def.sc||1);
   const o={kind:def.kind,d:d,x:x,hw:def.hw,hz:def.hz,mesh:mesh,key:key,vi:vi,ph:0,hit:false,t:0,vx:0,vy:0,spin:0,walk:false,go:false,hh:def.hh||0,used:false,tp:type,cv:1,mv:false,lcTo:-1,sg:0};
   obstacles.push(o);return o;
 }
-const SIGG=new THREE.BoxGeometry(0.26,0.16,0.1);
+const SIGG=new THREE.BoxGeometry(0.26,0.16,0.1), SHADOW=new THREE.BoxGeometry(1,0.01,1);
 function makeSig(c){
   const g=new THREE.Group(),L=[],R=[];
   [[-1,L],[1,R]].forEach(function(p){[c.zf,c.zr].forEach(function(z){const b=new THREE.Mesh(SIGG,M.sig);b.position.set(p[0]*c.x,c.y,z);b.visible=false;g.add(b);p[1].push(b);});});
@@ -100,7 +115,7 @@ function zebraPed(i){
 function addPed(d,avoid){
   const b=Math.round(d/L);
   for(let k=0;k<=6;k++)for(const i of [b+k,b-k]){
-    if(isX(i)&&i*L-6>ST.dist+50&&zebraPed(i))return;
+    if(isX(i)&&!underOf(i)&&i*L-6>ST.dist+50&&zebraPed(i))return;
   }
   if(busyAt(d,10))return;
   const r=Math.random();
@@ -150,10 +165,10 @@ export function updAnimal(o,dt,m){
 export function genCross(){
   while(gen.xi*L<ST.dist+AHEAD-24){
     const i=gen.xi++;
-    if(!isX(i))continue;
+    if(!isX(i)||underOf(i))continue;   /* sobre a passagem subterrânea o cruzamento fica lá em cima, fora do caminho */
     /* todos cruzam no mesmo sentido, com a mesma velocidade e bem espaçados; sem caminhões: assim a via nunca fecha por inteiro */
     const n=Math.random()<0.92?2+((Math.random()*3)|0):0;
-    const side=Math.random()<0.5?-1:1, vx=11+Math.random()*5, gapT=22/vx, off=(Math.random()-0.5)*3;
+    const side=Math.random()<0.5?-1:1, vx=13+Math.random()*5, gapT=22/vx, off=1.0+Math.random()*1.8;
     /* cada carro passa pelo centro do cruzamento (off + k*gapT) s antes do jogador chegar.
        Em alta velocidade o jogador chega logo: o carro já nasce no meio do caminho, não a 58 m. */
     const tr=(i*L-ST.dist)/Math.max(ST.speed,8);

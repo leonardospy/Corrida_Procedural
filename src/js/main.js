@@ -51,6 +51,11 @@ function frame(now){
   audioTick();
 }
 
+/* só no servidor de desenvolvimento (npm run dev): atalhos para testar pelo console, sem depender do laço */
+if(import.meta.env&&import.meta.env.DEV)window.__dev={ST:ST,showCar:showCarModel,
+  step:function(n,dt){for(let k=0;k<(n||1);k++){const now=performance.now();if(ST.state==='play')updatePlay(dt||0.016,now);updateWorld(dt||0.016,now);updateCamera(dt||0.016,now);}
+    const toon=cfg.style>=0.5;bendU.uToon.value=toon?1:0;renderFrame(toon);}};
+
 showCarModel(save.car);
 applySound();
 applyCfg();

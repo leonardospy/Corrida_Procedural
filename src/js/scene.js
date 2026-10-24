@@ -23,10 +23,10 @@ export const spot=new THREE.SpotLight(0xfff1d6,0,60,0.46,0.6,1);
 spot.position.set(0,11,SHOW_Z+0.5);spot.target.position.set(0,0.4,SHOW_Z);scene.add(spot,spot.target);
 
 export const bendU={uBend:{value:new THREE.Vector2(0,0)},uDip:{value:[0,1,2,3].map(()=>new THREE.Vector4())},uToon:{value:0}};
-/* estilo Desenho: a luz direta vira três faixas (sombra, meio-tom, luz), mantendo a cor da luz */
+/* estilo Desenho: a luz direta vira faixas suaves e a sombra nunca fica escura, mantendo a cor da luz */
 const TOON='\nfloat tDl=dot(reflectedLight.directDiffuse,vec3(0.299,0.587,0.114));\n'+
   'float tAl=max(dot(diffuseColor.rgb,vec3(0.299,0.587,0.114))*RECIPROCAL_PI,1e-4);\n'+
-  'float tL=tDl/tAl;\nfloat tQ=0.3*smoothstep(0.06,0.12,tL)+0.5*smoothstep(0.5,0.58,tL)+0.35*smoothstep(1.25,1.35,tL);\n'+
+  'float tL=tDl/tAl;\nfloat tQ=0.42+0.5*smoothstep(0.18,0.42,tL)+0.18*smoothstep(0.95,1.25,tL);\n'+
   'reflectedLight.directDiffuse*=mix(1.0,tQ/max(tL,1e-3),uToon);\n';
 /* rebaixa a faixa da pista (|x|<7) nas passagens subterrâneas: uDip[k] = início, fim, profundidade, rampa */
 const DIP='vec4 wq=vec4(transformed,1.0);\n#ifdef USE_INSTANCING\nwq=instanceMatrix*wq;\n#endif\nwq=modelMatrix*wq;\n'+
@@ -74,6 +74,7 @@ Object.assign(M,{
   beacon:patch(new THREE.MeshBasicMaterial({color:0xffa21a})),
   sig:patch(new THREE.MeshBasicMaterial({color:0xffa81a})),
   sidew:mk({color:0xa9a39a},true),
+  cground:mk({color:0x8f8c86},true),
   vest:patch(new THREE.MeshBasicMaterial({vertexColors:true})),
   pool2:patch(new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})),
   beam2:new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false})
@@ -150,6 +151,54 @@ M.hill=mk({color:0x7a6aa0,side:THREE.DoubleSide});
 M.tube=mk({vertexColors:true,side:THREE.DoubleSide});
 M.upw=mk({vertexColors:true,side:THREE.DoubleSide},true);
 M.tlamp=patch(new THREE.MeshBasicMaterial({color:0xfff0c8}),true);
+
+/* ---------- Caminhada dos pedestres no vertex shader ----------
+   aLimb diz a parte do corpo; a fase do passo vem de aWalk (instâncias: deslocamento, ritmo) ou de uWalk (fase, amplitude). */
+bendU.uWalkT={value:0};
+const WALK_HEAD='attribute float aLimb;\nuniform float uWalkT;\n#ifdef USE_INSTANCING\nattribute vec2 aWalk;\n#else\nuniform vec2 uWalk;\n#endif\n'+
+  'vec3 wRot(vec3 p,float py,float a){p.y-=py;float c=cos(a),s=sin(a);return vec3(p.x,c*p.y-s*p.z,s*p.y+c*p.z)+vec3(0.0,py,0.0);}\n';
+const WALK_BODY=[
+  '#ifdef USE_INSTANCING',
+  'float wp=uWalkT*aWalk.y+aWalk.x, wa=step(0.001,aWalk.y);',
+  '#else',
+  'float wp=uWalk.x, wa=uWalk.y;',
+  '#endif',
+  'float sp=sin(wp), cp=cos(wp), lb=aLimb, isL=mod(lb,2.0);',
+  'if(lb>0.5&&lb<4.5){',
+  /* pernas: a coxa balança e o joelho dobra enquanto a perna volta para a frente */
+  '  float hip=(isL>0.5?0.5*sp:-0.5*sp)*wa, knee=-0.95*(isL>0.5?max(0.0,cp):max(0.0,-cp))*wa;',
+  '  if(lb>2.5)transformed=wRot(transformed,0.46,knee);',
+  '  transformed=wRot(transformed,0.86,hip);',
+  '}else if(lb>4.5&&lb<8.5){',
+  /* braços: oposto à perna do mesmo lado, cotovelo levemente dobrado */
+  '  float sh=(isL>0.5?-0.42*sp:0.42*sp)*wa, el=(0.22+0.28*(isL>0.5?max(0.0,-sp):max(0.0,sp)))*wa;',
+  '  if(lb>6.5)transformed=wRot(transformed,1.2,el);',
+  '  transformed=wRot(transformed,1.5,sh);',
+  '}',
+  /* o corpo sobe quando a perna de apoio passa por baixo e balança um pouco de lado */
+  'transformed.y+=wa*0.045*(abs(cp)-0.6);',
+  'transformed.x+=wa*0.025*sp;'
+].join('\n');
+function walkPatch(mat,u){
+  const prev=mat.onBeforeCompile, pk=mat.customProgramCacheKey;
+  mat.onBeforeCompile=function(s){
+    prev(s);
+    s.uniforms.uWalkT=bendU.uWalkT;if(u)s.uniforms.uWalk=u.uWalk;
+    s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\n'+WALK_HEAD).replace('#include <begin_vertex>','#include <begin_vertex>\n'+WALK_BODY);
+  };
+  mat.customProgramCacheKey=()=>pk()+'-walk';
+  return mat;
+}
+/* pedestres da calçada (instâncias) */
+M.pedI=walkPatch(mk({vertexColors:true}));
+/* pedestre solto na pista: cada um tem seus materiais, com a própria fase do passo em userData.walk */
+export const vestMats=[];
+export function pedMats(){
+  const u={uWalk:{value:new THREE.Vector2(0,0)}};
+  const body=walkPatch(mk({vertexColors:true}),u), vest=walkPatch(patch(new THREE.MeshBasicMaterial({vertexColors:true})),u);
+  vestMats.push(vest);body.userData.walk=u.uWalk.value;
+  return [body,vest];
+}
 
 /* Cenários da pista */
 const CK=['top','hor','ground','tree','mount','hemiS','hemiG','dir','sun','road'];

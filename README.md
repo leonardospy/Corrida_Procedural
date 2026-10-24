@@ -26,6 +26,7 @@ src/js/
   input.js            teclado, toque e botões
   effects.js audio.js hud.js menu.js save.js player.js showroom.js state.js
 corrida_v1.html       versão original em arquivo único (não editar)
+Carros 01.js          modelos de carro anteriores (cópia de src/js/vehicles.js antes da versão 2)
 ```
 
 Variáveis que só um módulo altera ficam nele (`export let`) e os outros só leem.

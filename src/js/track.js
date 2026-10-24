@@ -139,15 +139,34 @@ const BTYPES={
     antenna(B,W,3.5,84.4,3,10);
     winBands(W,16,12,3,84,3.5,2.5);winBands(W,11,9,84,118,3.5,2.5,-1.5,0);
     return {b:B,w:W,tint:[0x86a6c0,0x9db0bf,0x6f8796,0xb8a37a,0x7c96a8]};
+  },
+  /* obra: lajes e pilares de concreto, tapume e guindaste de torre */
+  site:function(){
+    const B=[],W=[],w=13,d=11,fh=3.4,fl=6,top=fl*fh;
+    for(let f=0;f<=fl;f++)B.push(PB(w,0.3,d,0,f*fh+0.15,0,0xb8b4ac));
+    for(let a=-1;a<=1;a++)[-1,1].forEach(function(b){B.push(PB(0.45,top,0.45,a*(w/2-0.3),top/2,b*(d/2-0.3),0xa8a49c));});
+    [-1,1].forEach(function(s){B.push(PB(w+3,2.2,0.12,0,1.1,s*(d/2+1.5),0x2f6fd6),PB(0.12,2.2,d+3,s*(w/2+1.5),1.1,0,0x2f6fd6));});
+    const cx=w/2+2.5,cz=-d/2+1,H=top+14;
+    B.push(PB(1.2,H,1.2,cx,H/2,cz,0xf2b705));
+    for(let y=2;y<H;y+=2.2)B.push(PB(1.26,0.12,1.26,cx,y,cz,0x8a6a10));
+    B.push(PB(1.6,1.6,1.6,cx,H+0.8,cz,0x3a3d46),PB(0.9,0.9,26,cx,H+2,cz-12,0xf2b705),PB(0.9,0.9,9,cx,H+2,cz+5,0xf2b705),
+      PB(2.2,1.6,2.4,cx,H+1.4,cz+8,0x8d94a0),PB(0.3,5,0.3,cx,H+4.5,cz,0xf2b705),PB(0.05,9,0.05,cx,H-2.5,cz-20,0x2a2a2a),PB(1,0.6,1,cx,H-7.2,cz-20,0xd8433a));
+    W.push(PB(0.35,0.35,0.35,cx,H+7.1,cz,0xff3020));
+    return {b:B,w:W,tint:[0xffffff,0xf4f0e8]};
   }
 };
+/* dois prédios por lado em cada faixa: slot 0 junto da rua, slot 1 ao fundo */
 const BLD={};
 for(const k in BTYPES){
   const t=BTYPES[k]();
-  BLD[k]={tint:t.tint,b:inst('bld_'+k,geo(t.b),M.vcol,N*2,true),w:inst('win_'+k,geo(t.w),M.win,N*2)};
+  BLD[k]={tint:t.tint,b:inst('bld_'+k,geo(t.b),M.vcol,N*4,true),w:inst('win_'+k,geo(t.w),M.win,N*4)};
 }
 const BNAMES=Object.keys(BLD);
-function hideBld(q){BNAMES.forEach(function(k){hideI(BLD[k].b,q);hideI(BLD[k].w,q);});}
+function hideBld(q){BNAMES.forEach(function(k){for(let f=0;f<2;f++){hideI(BLD[k].b,q*2+f);hideI(BLD[k].w,q*2+f);}});}
+/* rua transversal: calçadas dos dois lados, de 6 a 80 m da pista */
+inst('xwalk',BX(74,0.3,2.6),M.sidew,N*4);
+/* chão da cidade: concreto no lugar da grama */
+inst('cground',BX(120,0.5,L+0.05),M.cground,N*2);
 /* tons por instância: pinheiros, frondosas (com algumas de outono) e arbustos */
 const PINE_T=[0xffffff,0xdcefd4,0xeef8d0,0xc8dcc8,0xe8f0e0,0xd0e8e0];
 const OAK_T=[0xb8e09a,0x9ccc80,0xd0e8a0,0x88c070,0xc8d890,0xa8d48a,0xf0b060,0xe08a50];
@@ -191,6 +210,7 @@ inst('tlamp',BX(0.32,0.12,5),M.tlamp,N*2);
 /* passagem subterrânea: muros de arrimo com mureta e laje de cobertura no nível da rua */
 inst('upWall',geo([PB(0.6,8.1,L+0.05,-6.4,-3.15,0,0xb3ad9f),PB(0.6,8.1,L+0.05,6.4,-3.15,0,0xb3ad9f),
   PB(0.66,0.14,L+0.05,-6.4,0.92,0,0xffc24a),PB(0.66,0.14,L+0.05,6.4,0.92,0,0xffc24a)]),M.upw,N);
+inst('upWallC',geo([PB(0.6,7.3,L+0.05,-6.4,-3.55,0,0xb3ad9f),PB(0.6,7.3,L+0.05,6.4,-3.55,0,0xb3ad9f)]),M.upw,N);
 inst('upRoof',geo([PB(13.4,0.8,L+0.05,0,-0.1,0,0x8d8a84),PB(13.4,0.06,L+0.05,0,0.33,0,0x6f6c68)]),M.upw,N);
 /* calçadas, lojas, barracas e pedestres da cidade */
 inst('walk',BX(4.3,0.3,L+0.05),M.sidew,N*2);
@@ -198,7 +218,8 @@ const SHOPG=[shopGeo(0xe3c9a0,0xd8433a,0xf2efe6,0x2f6fd6),shopGeo(0xc9d6e3,0x2a9
 SHOPG.forEach(function(g,n){inst('shop'+n,g,[M.vcol,M.win],N*2);});
 const STALLG=[stallGeo(0xd8433a,0xf2efe6,[0xe94f4f,0xf2b705,0x57a05a]),stallGeo(0x2f6fd6,0xf2efe6,[0xf2b705,0xff7a1a,0xe94f4f]),cartGeo(0xff7a1a),cartGeo(0x2ec4b6)];
 STALLG.forEach(function(g,n){inst('stall'+n,g,M.vcol,N*2);});
-PEDC.forEach(function(c,n){inst('sped'+n,pedGeo(c,true,0,n),M.vcol,N*4);});
+/* pedestres da calçada: o passo é animado no shader; aWalk = (fase inicial, ritmo em rad/s; 0 = parado) */
+PEDC.forEach(function(c,n){const g=pedGeo(c,true,0,n);g.setAttribute('aWalk',new THREE.InstancedBufferAttribute(new Float32Array(N*8),2));inst('sped'+n,g,M.pedI,N*4);});
 /* calçada: árvores em canteiros e bancos */
 inst('stree',geo([PB(1.1,0.45,1.1,0,0.22,0,0x8d8a84),PB(0.9,0.06,0.9,0,0.46,0,0x5a4632),{g:new THREE.CylinderGeometry(0.11,0.15,2.6,5),m:tm(0,1.6,0),c:0x6b4a32},
   {g:Ico(1.1),m:tm(0,3.4,0,1,0.85,1),c:0x5e9e4a},{g:Ico(0.75),m:tm(0.55,3.0,0.3),c:0x6aae52},{g:Ico(0.7),m:tm(-0.45,3.1,-0.35),c:0x529444}]),M.vcol,N*2);
@@ -232,15 +253,18 @@ function streetscape(i,s,q,j,sd,z,city,under,core){
     const h=function(o){return hash(i,j*11+81+k*5+o);};
     /* no centro, a maioria é executivo de terno e pasta */
     const v=core>0.5&&h(9)<0.7?4+Math.floor(h(10)*2):Math.floor(h(0)*4);
-    sw[ix]={on:true,v:v,x:sd*(7.0+h(1)*2.0),z0:z+(h(2)-0.5)*4,amp:h(3)<0.35?0:2.5+h(4)*2.5,om:0.25+h(5)*0.25,ph:h(6)*6.28,sc:1+h(7)*0.15,ry0:h(8)<0.5?0:Math.PI};
+    /* 2 em cada 3 andam pela calçada num sentido, em passo constante; os outros ficam parados conversando */
+    const walk=h(3)>=0.33, spd=1.1+h(5)*0.5;
+    sw[ix]={on:true,v:v,x:sd*(7.0+h(1)*2.0),z0:z+(h(2)-0.5)*8,walk:walk,dir:h(4)<0.5?-1:1,sp:spd,t0:ST.walkT,sc:1+h(7)*0.15,ry0:h(8)*6.28};
+    const aw=I['sped'+v].geometry.attributes.aWalk;
+    aw.setXY(ix,h(6)*6.28,walk?spd/1.4*Math.PI*2:0);aw.needsUpdate=true;
   }
 }
 export function updateWalkers(){
   for(let i=0;i<sw.length;i++){
     const w=sw[i];if(!w.on)continue;
-    const a=w.om*ST.walkT+w.ph, z=w.z0+w.amp*Math.sin(a);
-    const ry=w.amp===0?w.ry0:(Math.cos(a)>0?Math.PI:0);
-    setI(I['sped'+w.v],i,w.x,0.22+(w.amp>0?Math.abs(Math.sin(ST.walkT*6+w.ph))*0.06:0),z,w.sc,w.sc,w.sc,ry);
+    const z=w.walk?w.z0+w.dir*w.sp*(ST.walkT-w.t0):w.z0;
+    setI(I['sped'+w.v],i,w.x,0.22,z,w.sc,w.sc,w.sc,w.walk?(w.dir>0?Math.PI:0):w.ry0);
   }
   for(let n=0;n<PEDC.length;n++)I['sped'+n].instanceMatrix.needsUpdate=true;
 }
@@ -296,29 +320,37 @@ export function placeTile(i){
   }else{hideI(I.tunHill,s);hideI(I.tunTube,s);hideI(I.tunCap,s);hideI(I.tunFrame,s);}
   /* passagem subterrânea: muros em todo o trecho, laje só na parte funda */
   const upCov=up&&i>=up.s+3&&i<up.e-3;
-  if(up)setI(I.upWall,s,0,0,z);else hideI(I.upWall,s);
-  if(upCov)setI(I.upRoof,s,0,0,z);else hideI(I.upRoof,s);
+  if(up&&!upCov)setI(I.upWall,s,0,0,z);else hideI(I.upWall,s);
+  if(upCov){setI(I.upWallC,s,0,0,z);setI(I.upRoof,s,0,0,z);}else{hideI(I.upWallC,s);hideI(I.upRoof,s);}
   for(let j=0;j<2;j++){
     if(tun)setI(I.tlamp,s*2+j,(j?1:-1)*4.1,7.55,z);
     else if(upCov)setI(I.tlamp,s*2+j,(j?1:-1)*3.2,-0.56,z);
     else hideI(I.tlamp,s*2+j);
   }
-  if(xr){
+  /* cruzamento: rua transversal com calçadas; sobre a passagem subterrânea ela fica no nível da laje e a pista segue por baixo */
+  const xrTop=xr&&!up;
+  if(xrTop){
     hideI(I.dash,s*2);hideI(I.dash,s*2+1);hideI(I.edgeL,s);hideI(I.edgeR,s);
-    setI(I.xroad,s,0,-0.195,z);
     for(let m=0;m<18;m++)setI(I.zebra,s*18+m,-4.8+(m%9)*1.2,0.022,m<9?z+5.9:z-5.9);
   }else{
     setI(I.dash,s*2,-LANE_W/2,0.016,z);setI(I.dash,s*2+1,LANE_W/2,0.016,z);
     setI(I.edgeL,s,-5.15,0.017,z);setI(I.edgeR,s,5.15,0.017,z);
-    hideI(I.xroad,s);for(let m=0;m<18;m++)hideI(I.zebra,s*18+m);
+    for(let m=0;m<18;m++)hideI(I.zebra,s*18+m);
+  }
+  if(xr)setI(I.xroad,s,0,up?0.17:-0.195,z);else hideI(I.xroad,s);
+  for(let k=0;k<4;k++){
+    if(xr)setI(I.xwalk,s*4+k,(k&1?1:-1)*(6.1+37),up?0.22:0.07,z+(k<2?1:-1)*5.9);else hideI(I.xwalk,s*4+k);
   }
   const core=cityCore(i);
+  /* vizinhas do cruzamento: os prédios se afastam dele para não invadir a rua transversal */
+  const xShift=isX(i+1)?3.5:(isX(i-1)?-3.5:0);
   for(let j=0;j<2;j++){
     const sd=j?1:-1, q=s*2+j, TB=s*24+j*12, BB=s*12+j*6, city=ck>0.55;
-    setI(I.ground,q,sd*66.1,-0.33,z);
+    if(city){hideI(I.ground,q);setI(I.cground,q,sd*66.1,-0.33,z);}
+    else{setI(I.ground,q,sd*66.1,-0.33,z);hideI(I.cground,q);}
     if(xr||tun){
       /* no cruzamento e dentro da montanha não há mureta, árvores, pedras, bichos nem prédios */
-      if(xr){hideI(I.curbR,q);hideI(I.curbW,q);}else{setI(I.curbR,q,sd*5.8,0.11,z-3);setI(I.curbW,q,sd*5.8,0.11,z+3);}
+      if(xrTop){hideI(I.curbR,q);hideI(I.curbW,q);}else{setI(I.curbR,q,sd*5.8,0.11,z-3);setI(I.curbW,q,sd*5.8,0.11,z+3);}
       hideI(I.rail,q);hideI(I.post,s*4+j*2);hideI(I.post,s*4+j*2+1);
       hideNature(TB,BB,q);hideBld(q);
       cityHide(s,q,j);
@@ -377,15 +409,19 @@ export function placeTile(i){
     });
     /* prédios (só na cidade) */
     /* prédios (só na cidade): perto da rua os baixos, ao fundo os altos; no centro, arranha-céus colados na avenida */
-    const here=ck>0.55&&hash(i,j*9+61)<0.92&&!(isX(i-1)||isX(i+1)||isX(i-2)||isX(i+2));
     hideBld(q);
-    if(here){
-      const inC=core>0.5, far=hash(i,j*9+64)<(inC?0.35:0.45);
-      const list=inC?(far?['core1','core2','tower']:['office','core1','core2','tower']):(far?['office','tower','brick']:['res','brick','res','brick']);
-      const k=pickH(list,hash(i,j*9+60)), bl=BLD[k];
-      const x=sd*(far?(48+hash(i,j*9+62)*26):((inC?26:24)+hash(i,j*9+62)*(inC?6:10)));
-      const zz=z+(hash(i,j*9+63)-0.5)*2, ry=hash(i,j*9+65)<0.5?0:Math.PI/2;
-      setI(bl.b,q,x,0,zz,1,1,1,ry);setI(bl.w,q,x,0,zz,1,1,1,ry);tint(bl.b,q,pickH(bl.tint,hash(i,j*9+66)));
+    if(ck>0.55){
+      const inC=core>0.5;
+      for(let f=0;f<2;f++){
+        const o=j*20+f*9+60;
+        if(hash(i,o+1)>0.97)continue;
+        /* junto da rua: baixos na periferia, arranha-céus no centro; ao fundo: os altos e, às vezes, uma obra */
+        const list=f?(inC?['core1','core2','tower','office','site']:['office','tower','brick','res','site']):(inC?['office','core1','core2','tower']:['res','brick','res','brick','office','site']);
+        const k=pickH(list,hash(i,o)), bl=BLD[k], slot=q*2+f;
+        const x=sd*(f?(46+hash(i,o+2)*22):((inC?26:24)+hash(i,o+2)*(inC?4:6)));
+        const zz=z+xShift+(hash(i,o+3)-0.5)*(xShift?0.5:2), ry=k==='site'?(sd<0?Math.PI:0):(hash(i,o+5)<0.5?0:Math.PI/2);
+        setI(bl.b,slot,x,0,zz,1,1,1,ry);setI(bl.w,slot,x,0,zz,1,1,1,ry);tint(bl.b,slot,pickH(bl.tint,hash(i,o+6)));
+      }
     }
     streetscape(i,s,q,j,sd,z,city,!!up,core);
   }

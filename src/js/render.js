@@ -2,7 +2,7 @@
 import {ST} from './shared.js';
 import {$,game} from './dom.js';
 import {AHEAD,L,LANES,MAXC,SHOW_Z,V0,cfg,clamp,diff,lerp,smooth} from './config.js';
-import {M,PAL,bendU,camera,headPool,hemi,renderer,scene,skyGroup,skyU,spot,starMat,stars,studio,sunL,sunMat,sunMesh,updateLights} from './scene.js';
+import {M,PAL,bendU,camera,headPool,hemi,renderer,scene,skyGroup,skyU,spot,starMat,stars,studio,sunL,sunMat,sunMesh,updateLights,vestMats} from './scene.js';
 import {C,boardMats,cloudPivot} from './scenery.js';
 import {I,flushInstances,hasLamp,placeTile,setI,updateWalkers} from './track.js';
 import {coverAt,roadY,underNear} from './tunnels.js';
@@ -17,7 +17,7 @@ import {animCar,updateDebris,updateDust,updateSmoke} from './effects.js';
 let camH=4.4,camD=9.2,baseFov=62,fovCur=62;
 ST.camX=0;ST.camY=3;ST.camO=8;ST.lkX=0;ST.lkY=1;ST.lkO=-2;ST.vox=0;ST.voy=0;
 export function updateWorld(dt,now){
-  ST.walkT+=dt;
+  ST.walkT+=dt;bendU.uWalkT.value=ST.walkT;
   const iMax=Math.ceil((ST.dist+AHEAD)/L);
   while(ST.lastTile<iMax){ST.lastTile++;placeTile(ST.lastTile);}
 
@@ -104,7 +104,7 @@ export function updateWorld(dt,now){
   const on=(ST.state==='play'||ST.state==='crash')?1:0;
   M.lights.color.setScalar(0.55+0.45*lightK);
   M.halo.opacity=0.9*dark;M.halo.visible=dark>0.05;
-  M.vest.visible=night>0.12;
+  M.vest.visible=night>0.12;vestMats.forEach(function(m){m.visible=night>0.12;});
   M.rays.opacity=0.4+0.55*night;
   M.beam2.visible=false;
   M.pool2.visible=false;

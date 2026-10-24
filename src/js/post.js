@@ -1,4 +1,4 @@
-/* Estilo Desenho: a cena vai para uma textura e volta com contornos escuros e cores mais vivas */
+/* Estilo Desenho: a cena vai para uma textura e volta com cores vivas, sombras abertas e um contorno leve */
 import {camera,renderer,scene} from './scene.js';
 
 let rt=null;
@@ -17,10 +17,14 @@ const mat=new THREE.ShaderMaterial({
     /* contorno onde a profundidade salta em relação aos vizinhos (silhuetas e quinas) */
     '  e=max(e,abs(lin(vUv+vec2(px.x,0.0))-d));e=max(e,abs(lin(vUv-vec2(px.x,0.0))-d));',
     '  e=max(e,abs(lin(vUv+vec2(0.0,px.y))-d));e=max(e,abs(lin(vUv-vec2(0.0,px.y))-d));',
-    '  float edge=smoothstep(0.035,0.09,e/d)*(1.0-smoothstep(70.0,160.0,d));',
-    '  float l=dot(c,vec3(0.299,0.587,0.114));',
-    '  c=mix(vec3(l),c,1.38);c=pow(max(c,0.0),vec3(0.93));',
-    '  c=mix(c,c*0.18+vec3(0.02,0.01,0.05),edge*0.9);',
+    '  float edge=smoothstep(0.05,0.14,e/d)*(1.0-smoothstep(40.0,110.0,d));',
+    /* cores vivas e limpas (vibrância: puxa mais o que está apagado), sombras abertas, contraste macio */
+    '  float l=dot(c,vec3(0.299,0.587,0.114)), sat=max(c.r,max(c.g,c.b))-min(c.r,min(c.g,c.b));',
+    '  c=mix(vec3(l),c,1.25+0.45*(1.0-sat));',
+    '  c=max(c,0.0)*0.9+0.06;c=mix(c,smoothstep(0.0,1.0,c),0.35);',
+    '  c+=vec3(0.03,0.015,-0.01)*l+vec3(-0.01,0.0,0.03)*(1.0-l);',
+    /* contorno só sugerido nas silhuetas próximas */
+    '  c=mix(c,c*0.6,edge*0.3);',
     '  gl_FragColor=vec4(c,1.0);',
     '}'].join('\n')
 });

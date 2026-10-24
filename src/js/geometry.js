@@ -10,19 +10,23 @@ export const tm=(x=0,y=0,z=0,sx=1,sy=1,sz=1,rx=0,ry=0,rz=0)=>new THREE.Matrix4()
 export const PB=(w,h,l,x,y,z,c)=>({g:UB,m:tm(x,y,z,w,h,l),c:c});
 export const PCy=(r1,r2,h,s,x,y,z,c,rx=0,ry=0,rz=0)=>({g:new THREE.CylinderGeometry(r1,r2,h,s),m:tm(x,y,z,1,1,1,rx,ry,rz),c:c});
 export const PCo=(r,h,s,x,y,z,c)=>({g:new THREE.ConeGeometry(r,h,s),m:tm(x,y,z),c:c});
+/* p.limb (opcional): parte do corpo que o shader de caminhada anima (vira o atributo aLimb) */
 export function geo(parts){
-  const P=[],C=[],col=new THREE.Color();
+  const P=[],C=[],LB=[],col=new THREE.Color();
+  let limbs=false;
   parts.forEach(p=>{
     const g=p.g.index?p.g.toNonIndexed():p.g.clone();
     if(p.m)g.applyMatrix4(p.m);
     const a=g.attributes.position.array;
     col.set(p.c===undefined?0xffffff:p.c);
-    for(let i=0;i<a.length;i+=3){P.push(a[i],a[i+1],a[i+2]);C.push(col.r,col.g,col.b);}
+    if(p.limb!==undefined)limbs=true;
+    for(let i=0;i<a.length;i+=3){P.push(a[i],a[i+1],a[i+2]);C.push(col.r,col.g,col.b);LB.push(p.limb||0);}
     g.dispose();
   });
   const out=new THREE.BufferGeometry();
   out.setAttribute('position',new THREE.Float32BufferAttribute(P,3));
   out.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
+  if(limbs)out.setAttribute('aLimb',new THREE.Float32BufferAttribute(LB,1));
   out.computeVertexNormals();
   return out;
 }
@@ -78,6 +82,11 @@ export function geoL(body,lights,halos){
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.BufferAttribute(P,3));
   g.setAttribute('color',new THREE.BufferAttribute(Q,3));
+  if(a.attributes.aLimb){
+    const LB=new Float32Array((na+nb+nh)/3);LB.set(a.attributes.aLimb.array);
+    if(b.attributes.aLimb)LB.set(b.attributes.aLimb.array,na/3);
+    g.setAttribute('aLimb',new THREE.BufferAttribute(LB,1));
+  }
   g.computeVertexNormals();
   g.addGroup(0,na/3,0);
   g.addGroup(na/3,nb/3,1);

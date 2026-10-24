@@ -5,7 +5,7 @@ import {PAL} from './scene.js';
 import {drawSign,gantries} from './obstacles.js';
 import {updateProps} from './scenery.js';
 import {GJ,coinList,obstacles,wrenchList} from './state.js';
-import {gen,genCross,genRow,genWork,laneFree,leaderLimit,releaseObstacle,sideBlocked,sigSet,updAnimal} from './generator.js';
+import {crossWait,gen,genCross,genRow,genWork,laneFree,leaderLimit,releaseObstacle,sideBlocked,sigSet,updAnimal} from './generator.js';
 import {OB} from './obstacles.js';
 import {busyAt,underOf} from './tunnels.js';
 import {emitDust,emitSmoke} from './effects.js';
@@ -68,11 +68,11 @@ export function updatePlay(dt,now){
         if(!o.go&&o.d-ST.dist<ST.speed*o.lead)o.go=true;
         if(o.go){
           if(o.xcar)m.visible=true;
-          const nx=o.x+o.dir*o.vx*o.cv*dt, stop=sideBlocked(o,nx);
-          if(!stop){o.x=nx;o.ph+=dt*o.vx*1.6;}
+          const nx=o.x+o.dir*o.vx*o.cv*dt, stop=o.xcar?crossWait(o,nx):sideBlocked(o,nx);
+          if(!stop){o.x=nx;o.ph+=dt*o.vx*o.cv;}
           m.position.x=o.x;m.position.y=0;
-          /* pedestre: alterna as poses de passo; parado esperando, fica em pé */
-          if(o.tp==='ped'){const W=OB.ped.walkV[o.vi];m.geometry=stop?OB.ped.geos[o.vi]:W[Math.floor(o.ph)%W.length];}
+          /* pedestre: a fase do passo acompanha a distância andada (passada de ~1,4 m); parado, fica em pé */
+          if(o.tp==='ped'){const w=m.material[0].userData.walk;if(w)w.set(o.ph/1.4*Math.PI*2,stop?0:1);}
           if(Math.abs(o.x)>(o.lim||8.5))o.walk=false;
         }
       }
