@@ -1,0 +1,22 @@
+/* ---------- Pausa e fim de corrida ---------- */
+.overlay{
+  position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
+  padding-block:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:rgba(18,13,31,.58);overflow:auto;
+}
+.card{
+  width:min(440px,100%);padding:24px 22px;border-radius:16px;
+  background:var(--glass);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  display:flex;flex-direction:column;gap:14px;min-width:0;
+}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin:0}
+.stats div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stats dt{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stats dd{margin:0;font-size:26px;font-weight:700;font-style:italic;font-variant-numeric:tabular-nums}
+.stats .big{grid-column:1/-1}
+.stats .big dd{font-size:44px;color:var(--sun)}
+.rec{color:var(--sun);font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+#err{position:absolute;inset:0;z-index:9;display:grid;place-items:center;padding:24px;text-align:center;background:var(--ink);color:var(--paper);font-size:16px}

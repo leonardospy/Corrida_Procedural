@@ -1,0 +1,16 @@
+{
+  "name": "corrida-procedural",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Jogo de corrida procedural em three.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --open /corrida.html"
+  },
+  "devDependencies": {
+    "vite": "6.0.7",
+    "vite-plugin-singlefile": "2.1.0"
+  }
+}

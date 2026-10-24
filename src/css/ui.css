@@ -1,0 +1,17 @@
+/* ---------- Botões e tipografia ---------- */
+h1,h2{margin:0;font-style:italic;font-weight:700;text-transform:uppercase;line-height:.95;text-wrap:balance}
+h1{font-size:clamp(36px,6.2vw,60px)}
+h1 span{display:block;color:var(--hot)}
+h2{font-size:clamp(30px,8vw,42px)}
+h3{margin:0}
+p{margin:0;color:var(--muted);font-size:15px;line-height:1.45;max-width:44ch}
+kbd{font:inherit;font-weight:700;color:var(--paper);padding:1px 7px;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;background:rgba(255,244,226,.08)}
+.btn{
+  appearance:none;border:0;border-radius:10px;background:var(--hot);color:var(--ink);
+  font:700 18px var(--font);letter-spacing:.14em;text-transform:uppercase;
+  min-height:54px;padding:0 24px;cursor:pointer;box-shadow:0 4px 0 var(--hot-d);width:100%;
+}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--hot-d)}
+.btn.alt{background:transparent;color:var(--paper);border:1px solid var(--line);box-shadow:none}
+.btn.sm{min-height:42px;font-size:13px;letter-spacing:.1em;padding:0 14px;width:auto;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:default;box-shadow:none}

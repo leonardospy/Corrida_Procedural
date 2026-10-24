@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Corrida Procedural</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./src/css/base.css">
+<link rel="stylesheet" href="./src/css/hud.css">
+<link rel="stylesheet" href="./src/css/ui.css">
+<link rel="stylesheet" href="./src/css/menu.css">
+<link rel="stylesheet" href="./src/css/overlay.css">
+</head>
+<body>
+<div id="game">
+  <canvas id="c"></canvas>
+
+  <div class="layer" id="hud" hidden>
+    <div class="top">
+      <div class="score">
+        <span class="lab">Pontos</span>
+        <span class="val" id="score">0</span>
+        <span class="sub"><span id="dist">0</span> m · <span id="coins">0</span> moedas</span>
+        <div class="hp" id="hp" aria-label="Integridade do carro"><em>Casco</em><i></i><i></i><i></i></div>
+      </div>
+      <div class="tools">
+        <button class="ico" id="btnPause" type="button" aria-label="Pausar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        </button>
+        <button class="ico" id="btnSound" type="button" aria-label="Ligar ou desligar o som">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="slash" d="M17 8l5 8M22 8l-5 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="conf" id="conf" hidden><span>Comandos invertidos</span><div><i id="confBar"></i></div></div>
+    <div class="toast" id="toast"><b id="toastT"></b><span id="toastS"></span></div>
+    <div class="dash">
+      <div class="lvl"><span id="lvl">Nível 1</span><span id="stage">Amanhecer</span></div>
+      <div class="spd"><b id="kmh">0</b><small>km/h</small></div>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
+  </div>
+
+  <section class="menu" id="menu">
+    <div class="mcol" id="mcol">
+      <div class="wallet"><span class="cn"></span><b id="wallet">0</b><small>moedas</small></div>
+
+      <div class="panel" id="pMain">
+        <h1>Corrida <span>Procedural</span></h1>
+        <nav class="nav" aria-label="Menu principal">
+          <button class="nb primary" type="button" data-go="play">Jogar<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="nb" type="button" data-go="shop">Loja<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="nb" type="button" data-go="records">Recordes<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="nb" type="button" data-go="cfg">Ajustes<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <button class="nb" type="button" data-go="quit">Sair<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </nav>
+        <ul class="legend">
+          <li><i style="--c:var(--sun)"></i>Carros, vans e caminhões: 3 batidas e acabou</li>
+          <li><i style="--c:var(--hot)"></i>Cones, barreiras e acidentes: fim da corrida</li>
+          <li><i style="--c:#7c6cf0"></i>Pedestres (cidade) e animais (mata): comandos invertidos por 6 s</li>
+          <li><i style="--c:#4fb3ff"></i>Chave inglesa: repara 1 de casco</li>
+          <li><i style="--c:#2ec4b6"></i>Carreta-rampa: faz o carro saltar</li>
+        </ul>
+        <p class="keys"><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> trocam de via · <kbd>Espaço</kbd> pausa<br>No celular: deslize ou toque nas laterais.</p>
+      </div>
+
+      <div class="panel" id="pShop" hidden>
+        <h2>Loja</h2>
+        <div class="cars" id="shopList"></div>
+        <button class="nb back" type="button" data-go="main">Voltar</button>
+      </div>
+
+      <div class="panel" id="pRec" hidden>
+        <h2>Recordes</h2>
+        <ol class="recs" id="recList"></ol>
+        <button class="nb back" type="button" data-go="main">Voltar</button>
+      </div>
+
+      <div class="panel" id="pCfg" hidden>
+        <h2>Ajustes</h2>
+        <div class="cfg" id="cfgList"></div>
+        <button class="nb" type="button" id="cfgReset">Restaurar padrão</button>
+        <button class="nb back" type="button" data-go="main">Voltar</button>
+      </div>
+
+      <div class="panel" id="pQuit" hidden>
+        <h2>Até a próxima!</h2>
+        <p>Pode fechar a aba ou o app quando quiser. Suas moedas, carros e recordes ficam salvos neste aparelho.</p>
+        <button class="nb primary back" type="button" data-go="main">Voltar ao menu</button>
+      </div>
+    </div>
+
+    <div class="show" id="show"><b id="showName"></b><span id="showStats"></span></div>
+    <button class="ico menu-snd" id="btnSound2" type="button" aria-label="Ligar ou desligar o som">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="slash" d="M17 8l5 8M22 8l-5 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </section>
+
+  <section class="overlay" id="ovPause" hidden>
+    <div class="card">
+      <h2>Pausado</h2>
+      <button class="btn" id="btnResume" type="button">Continuar</button>
+      <button class="btn alt" id="btnPauseMenu" type="button">Sair para o menu</button>
+    </div>
+  </section>
+
+  <section class="overlay" id="ovOver" hidden>
+    <div class="card">
+      <div>
+        <div class="rec" id="oNew" hidden>Novo recorde</div>
+        <h2 id="oTitle">Batida</h2>
+      </div>
+      <dl class="stats">
+        <div class="big"><dt>Pontos</dt><dd id="oScore">0</dd></div>
+        <div><dt>Distância</dt><dd><span id="oDist">0</span> m</dd></div>
+        <div><dt>Vel. máxima</dt><dd><span id="oSpeed">0</span> km/h</dd></div>
+        <div><dt>Moedas ganhas</dt><dd><span class="cn"></span><span id="oCoins">0</span></dd></div>
+        <div><dt>Recorde</dt><dd id="oBest">0</dd></div>
+      </dl>
+      <button class="btn" id="btnRetry" type="button">Tentar de novo</button>
+      <button class="btn alt" id="btnOverMenu" type="button">Menu</button>
+    </div>
+  </section>
+
+  <div id="fade"></div>
+  <div id="err" hidden></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="./src/js/main.js"></script>
+</body>
+</html>

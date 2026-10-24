@@ -1,0 +1,30 @@
+img{max-width:100%}
+[hidden]:not([hidden=until-found i]){display:none!important}
+/* Layout: cena 3D em tela cheia. Menu: coluna à esquerda e showroom à direita (retrato: menu em cima, carro embaixo). HUD nas bordas durante a corrida. */
+:root{
+  color-scheme:dark;
+  --ink:#120d1f;
+  --paper:#fff4e2;
+  --muted:#cdbfdc;
+  --hot:#ff5a36;
+  --hot-d:#a8331a;
+  --sun:#ffc24a;
+  --glass:rgba(18,13,31,.72);
+  --line:rgba(255,244,226,.22);
+  --font:"Chakra Petch","Trebuchet MS",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+html{overflow:hidden;background:var(--ink)}
+body{
+  background:var(--ink);color:var(--paper);font-family:var(--font);
+  overflow:hidden;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+#game{position:relative;width:100%;height:100%;overflow:hidden;touch-action:none;background:var(--ink)}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#fade{position:absolute;inset:0;z-index:8;background:var(--ink);opacity:0;pointer-events:none;transition:opacity .2s ease}
+#fade.on{opacity:1;pointer-events:auto}
+
+.cn{display:inline-block;width:.85em;height:.85em;margin:0 .35em 0 .15em;vertical-align:-.08em;background:var(--sun);
+  clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
