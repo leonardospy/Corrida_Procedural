@@ -170,6 +170,21 @@ function build(s){
     parts:[], lights:[]
   };
   if(s.detail)s.detail(k);
+  /* caixas de roda: teto em arco e parede interna escuros, para o recorte não deixar ver através do carro */
+  const WELL=0x0e0e12, wx=s.W*0.93-s.ww;
+  s.wz.forEach(function(zc){
+    const p=paramsAt(s,zc);if(p.w*W<=wx)return;
+    const top=Math.min(2*s.r+0.04,p.ys-0.06), R=top-s.r, cy=s.r, xo=p.w*W-0.004, xi=wx-0.06, n=12, A=[];
+    for(let a=0;a<=n;a++){const t=-Math.PI*0.62+Math.PI*1.24*a/n;A.push([cy+Math.cos(t)*R,zc+Math.sin(t)*R]);}
+    [-1,1].forEach(function(sd){
+      const both=(a,b,c)=>{tri(body,a,b,c,WELL);tri(body,a,c,b,WELL);};
+      for(let a=0;a<n;a++){
+        const p0=A[a],p1=A[a+1];
+        both([sd*xi,p0[0],p0[1]],[sd*xo,p0[0],p0[1]],[sd*xo,p1[0],p1[1]]);both([sd*xi,p0[0],p0[1]],[sd*xo,p1[0],p1[1]],[sd*xi,p1[0],p1[1]]);
+        both([sd*xi,cy*0.4,zc],[sd*xi,p0[0],p0[1]],[sd*xi,p1[0],p1[1]]);
+      }
+    });
+  });
   return {body:body,light:light,halos:halos,parts:k.parts,lparts:k.lights,k:k};
 }
 /* formas para as tampas */
@@ -324,7 +339,7 @@ const CARSPEC={
     }},
   /* Lamborghini Aventador: cunha baixíssima, para-brisa contínuo, faróis e lanternas em Y, tomadas de ar e escape hexagonal */
   hiper:{L:4.8,W:1.02,r:0.35,ww:0.3,wz:[-1.46,1.46],c:0xffd23f,pillarC:0x15161c,rimStyle:'y5',rim:0x2a2c34,caliper:0xffd23f,
-    st:[[-0.5,0.78,0.16,0.3,0.38,0.38,0.5,0],[-0.44,0.92,0.14,0.46,0.54,0.54,0.55,0],[-0.33,0.98,0.13,0.8,0.84,0.84,0.58,-0.14],[-0.22,1,0.13,0.78,0.84,0.84,0.6,-0.08],[-0.14,1,0.13,0.72,0.8,0.8,0.6,0],[0,1,0.13,0.7,0.8,1.12,0.6,0.03],[0.14,1,0.13,0.72,0.82,1.13,0.58,0.03],[0.3,1,0.13,0.82,0.9,0.94,0.6,0.01],[0.46,0.99,0.14,0.8,0.9,0.9,0.6,0],[0.5,0.93,0.2,0.66,0.86,0.86,0.55,0]],
+    st:[[-0.5,0.78,0.16,0.32,0.4,0.4,0.5,0],[-0.45,0.9,0.14,0.42,0.5,0.5,0.55,0],[-0.39,0.96,0.13,0.56,0.64,0.64,0.58,-0.02],[-0.33,0.98,0.13,0.72,0.78,0.78,0.58,-0.05],[-0.26,1,0.13,0.8,0.85,0.85,0.6,-0.07],[-0.16,1,0.13,0.76,0.83,0.83,0.6,-0.03],[-0.06,1,0.13,0.72,0.8,0.8,0.6,0],[0.06,1,0.13,0.7,0.8,1.12,0.6,0.03],[0.16,1,0.13,0.72,0.82,1.13,0.58,0.03],[0.3,1,0.13,0.82,0.9,0.94,0.6,0.01],[0.46,0.99,0.14,0.8,0.9,0.9,0.6,0],[0.5,0.93,0.2,0.66,0.86,0.86,0.55,0]],
     detail:function(k){
       const f=k.front,r=k.rear;
       [-1,1].forEach(function(sd){
