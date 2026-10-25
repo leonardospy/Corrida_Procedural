@@ -1,5 +1,5 @@
 /* Chefes: em distâncias fixas a pista fica limpa e um perseguidor entra em cena.
-   Polícia (20 km): avisa a faixa, vem por trás (acerta quem estiver nela), passa, fica à frente trocando de faixa e
+   Polícia (8 km): avisa a faixa, vem por trás (acerta quem estiver nela), passa, fica à frente trocando de faixa e
    jogando espinhos; depois de 5 km perde o controle, sai da pista e explode. */
 import {ST} from './shared.js';
 import {$} from './dom.js';
@@ -13,7 +13,7 @@ import {blip,noise,sirenLevel} from './audio.js';
 import {explode} from './effects.js';
 
 /* para criar outro chefe, basta outra linha aqui (at = início em metros, len = duração da batalha) */
-export const BOSSES=[{at:20000,len:5000,name:'Polícia',reward:50}];
+export const BOSSES=[{at:8000,len:5000,name:'Polícia',reward:50}];
 const LEAD=55, WARN_T=2.4, PASS_V=24;
 
 const cop=makePolice();cop.g.visible=false;scene.add(cop.g);
