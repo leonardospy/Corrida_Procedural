@@ -78,6 +78,8 @@ function archAt(s,z,p){
   return p;
 }
 const hexRGB=h=>[((h>>16)&255)/255,((h>>8)&255)/255,(h&255)/255];
+/* mesma cor, mais escura (k<1): peças que acompanham a lataria em outro tom */
+const shade=(h,k)=>{const c=hexRGB(h);return (Math.round(c[0]*k*255)<<16)|(Math.round(c[1]*k*255)<<8)|Math.round(c[2]*k*255);};
 const GLASS=0x1d2a44, GLASS_HI=0x2c4166, UNDER=0x111116;
 
 /* ---------- Montagem ---------- */
@@ -137,7 +139,7 @@ function build(s){
     if(n[0]*out[0]+n[1]*out[1]+n[2]*out[2]<0)n=[-n[0],-n[1],-n[2]];
     const l=Math.hypot(n[0],n[1],n[2])||1;return [n[0]/l,n[1]/l,n[2]/l];
   };
-  const k={L:L,W:W,zf:PR[0].z,zr:PR[PR.length-1].z,front:PR[0].p,rear:PR[PR.length-1].p,at:z=>archAt(s,z,paramsAt(s,z)),
+  const k={c:C,L:L,W:W,zf:PR[0].z,zr:PR[PR.length-1].z,front:PR[0].p,rear:PR[PR.length-1].p,at:z=>archAt(s,z,paramsAt(s,z)),
     /* adesivo na lateral: entre z0 e z1 (fração do comprimento) e u0..u1 do perfil, nos dois lados */
     side:function(z0,z1,u0,u1,col,o){
       o=o||{};const arr=o.L?light:body,nz=o.nz||3,nu=Math.max(1,Math.ceil((u1-u0)*3)),off=o.off||0.012;
@@ -256,7 +258,7 @@ const CARSPEC={
       k.cap(-1,trap(0,capY(f,0.18),0.62,0.5,0.1),BLACK);
       k.cap(1,rect(0,capY(r,0.5),0.8,0.035),CHROME);plate(k,-1,capY(f,0.3));plate(k,1,capY(r,0.3));
       k.side(-0.06,0.3,4.2,4.8,CHROME,{nz:4});   /* friso cromado da janela */
-      mirrors(k,-0.08,0xffc24a);
+      mirrors(k,-0.08,k.c);
     }},
   /* Lancer Evolution X: sedã bravo, grade trapezoidal preta enorme com os três losangos, asa alta */
   gt:{L:4.5,W:0.93,r:0.34,ww:0.25,wz:[-1.38,1.32],c:0xe84a3a,pillarC:0x15161c,rimStyle:'y5',rim:0x2f3138,caliper:0xd8263a,
@@ -275,7 +277,7 @@ const CARSPEC={
       k.cap(1,rect(0,capY(r,0.12),1.3,0.1),BLACK);plate(k,1,capY(r,0.4));
       k.side(-0.34,-0.24,5.2,6.2,0x15161c,{nz:2});   /* saídas de ar no capô */
       for(let n=0;n<5;n++)k.parts.push({g:UB,m:tm((n-2)*0.13,k.at(0.13*k.L).roof+0.04,0.13*k.L,0.025,0.08,0.14),c:0x15161c});
-      mirrors(k,-0.13,0xe84a3a);wing(k,0.45,0.3,1.7,0.36,0x15161c,0.52);exhaust(k,0.55,0.3,0.06);
+      mirrors(k,-0.13,k.c);wing(k,0.45,0.3,1.7,0.36,0x15161c,0.52);exhaust(k,0.55,0.3,0.06);
     }},
   /* Mazda RX-7 FD: baixo e curvilíneo, faróis escamoteáveis fechados, boca oval, painel traseiro fumê com lanternas redondas */
   cupe:{L:4.3,W:0.88,r:0.33,ww:0.25,wz:[-1.3,1.28],c:0x2ec4b6,pillarC:0x15161c,rimStyle:'y5',
@@ -290,9 +292,9 @@ const CARSPEC={
         k.cap(1,circ(sd*0.36,capY(r,0.62),0.07),TAIL,{L:true,lift:0.006,halo:0.35});k.cap(1,circ(sd*0.6,capY(r,0.62),0.07),TAIL,{L:true,lift:0.006,halo:0.35});
       });
       k.cap(1,rect(0,capY(r,0.62),1.45,0.17),0x1a0c10);plate(k,1,capY(r,0.3));
-      k.side(-0.44,-0.33,5.1,5.9,0x26a89c,{nz:2});   /* tampas dos faróis escamoteáveis */
+      k.side(-0.44,-0.33,5.1,5.9,shade(k.c,0.88),{nz:2});   /* tampas dos faróis escamoteáveis */
       k.side(-0.44,-0.42,5.2,5.8,0x15161c,{nz:1});
-      mirrors(k,-0.04,0x2ec4b6);wing(k,0.46,0.08,1.4,0.26,0x2ec4b6,0.6);exhaust(k,0.45,0.28,0.06);
+      mirrors(k,-0.04,k.c);wing(k,0.46,0.08,1.4,0.26,k.c,0.6);exhaust(k,0.45,0.28,0.06);
     }},
   /* Toyota Supra MK4: capô longo, faróis de três lentes, boca grande, quatro lanternas redondas e a asa em arco */
   muscle:{L:4.5,W:0.95,r:0.35,ww:0.27,wz:[-1.38,1.36],c:0x7c6cf0,pillarC:0x15161c,rimStyle:'y5',
@@ -308,7 +310,7 @@ const CARSPEC={
         k.cap(1,circ(sd*0.32,capY(r,0.66),0.1),TAIL,{L:true,halo:0.4});k.cap(1,circ(sd*0.6,capY(r,0.66),0.1),TAIL,{L:true,halo:0.4});
       });
       k.cap(1,oval(0,capY(r,0.66),0.07,0.045),CHROME);plate(k,1,capY(r,0.36));
-      mirrors(k,0.0,0x7c6cf0);wing(k,0.45,0.42,1.85,0.4,0x4b3fb5,0.62);exhaust(k,0.4,0.3,0.07);
+      mirrors(k,0.0,k.c);wing(k,0.45,0.42,1.85,0.4,shade(k.c,0.6),0.62);exhaust(k,0.4,0.3,0.07);
     }},
   /* Audi R8: cabine adiantada, lâmina lateral em cor contrastante, grade Singleframe e as quatro argolas */
   veloce:{L:4.45,W:0.97,r:0.35,ww:0.28,wz:[-1.36,1.36],c:0xf4f1ea,pillarC:0x15161c,rimStyle:'mesh',caliper:0xd8263a,
@@ -431,9 +433,11 @@ function makeModelCar(s){
   g.userData={wheels:wheels,r:m.wheelR,wx:m.rear[0],wz:m.rear[1]};
   return g;
 }
-export function makeCar(id){
-  if(CARSPEC[id]&&CARSPEC[id].model)return makeModelCar(CARSPEC[id]);
-  const s=CARSPEC[id]||CARSPEC.pulga, g=new THREE.Group();
+/* color: cor da lataria escolhida na loja (opcional; sem ela, a cor original do carro) */
+export function makeCar(id,color){
+  const base=CARSPEC[id]||CARSPEC.pulga;
+  if(base.model)return makeModelCar(color===undefined?base:Object.assign({},base,{body:color}));
+  const s=color===undefined?base:Object.assign({},base,{c:color}), g=new THREE.Group();
   g.add(new THREE.Mesh(vehGeo(s,false),[M.vcol,M.lights,M.halo]));
   const wg=wheelGeo(s.r,s.ww,s.rimStyle,s.rim), wheels=[], ws=wheelsOf(s);
   ws.forEach(function(w){

@@ -9,12 +9,15 @@ import {save} from './save.js';
 /* Jogador                                                             */
 /* ------------------------------------------------------------------ */
 export let car=null,carId='';ST.cur=carById(save.car);
+/* cor escolhida na loja para cada carro (undefined = original) */
+export const carColor=id=>save.colors&&save.colors[id]!==undefined?save.colors[id]:undefined;
 export function showCarModel(id){
-  if(car&&carId===id)return;
+  const col=carColor(id), key=id+':'+col;
+  if(car&&carId===key)return;
   if(car){scene.remove(car);car.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
-  car=makeCar(id);carId=id;scene.add(car);
+  car=makeCar(id,col);carId=key;scene.add(car);
   const c=carById(id);
-  M.deb.color.setHex(c.c);
+  M.deb.color.setHex(col!==undefined?col:c.c);
   $('showName').textContent=c.name;
   $('showStats').textContent=Math.round(c.vmax*3.6)+' km/h · acel. '+c.accel+' m/s²';
 }

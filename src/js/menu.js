@@ -5,7 +5,7 @@ import {CFG_KEY,CFG_UI,cfg,fmt} from './config.js';
 import {beaconL,lampL} from './scene.js';
 import {CARS,carById} from './vehicles.js';
 import {persist,save} from './save.js';
-import {showCarModel} from './player.js';
+import {carColor,showCarModel} from './player.js';
 import {audioInit,blip,master} from './audio.js';
 import {startRun} from './race.js';
 import {resize} from './render.js';
@@ -28,9 +28,28 @@ function renderShop(){
     if(eq){b.textContent='Em uso';b.disabled=true;b.className+=' alt';b.dataset.act='none';}
     else if(owned){b.textContent='Usar';b.dataset.act='use';}
     else{b.dataset.act='buy';b.innerHTML='Comprar <span class="cn"></span>'+fmt(c.price);b.disabled=save.coins<c.price;}
-    art.appendChild(b);el.appendChild(art);
+    art.appendChild(b);
+    /* pintura: só no carro selecionado e já comprado */
+    if(ST.shopSel===c.id&&owned){
+      const row=document.createElement('div');row.className='paint';row.setAttribute('role','radiogroup');row.setAttribute('aria-label','Cor do '+c.name);
+      const cap=document.createElement('span');cap.textContent='Cor';row.appendChild(cap);
+      const now=carColor(c.id);
+      PAINTS.forEach(function(p){
+        const s=document.createElement('button');s.type='button';s.dataset.paint=p[1]===null?'orig':String(p[1]);
+        s.setAttribute('role','radio');s.setAttribute('aria-label',p[0]);s.title=p[0];
+        s.setAttribute('aria-checked',String(p[1]===null?now===undefined:now===p[1]));
+        s.style.setProperty('--sw','#'+(p[1]===null?c.c:p[1]).toString(16).padStart(6,'0'));
+        if(p[1]===null)s.className='orig';
+        row.appendChild(s);
+      });
+      art.appendChild(row);
+    }
+    el.appendChild(art);
   });
 }
+/* cores da loja; "Original" volta para a cor de fábrica do carro */
+const PAINTS=[['Original',null],['Vermelho',0xd8263a],['Laranja',0xff7a1a],['Amarelo',0xffc24a],['Verde',0x2a9d4f],['Azul-piscina',0x2ec4b6],
+  ['Azul',0x2f6fd6],['Roxo',0x7c4fd8],['Rosa',0xff5fa2],['Branco',0xf4f1ea],['Prata',0xb8bec8],['Grafite',0x4a4e58],['Preto',0x1b1d24]];
 function renderRecords(){
   const el=$('recList');el.innerHTML='';
   if(!save.records.length){const li=document.createElement('li');li.innerHTML='<span class="n">–</span><span class="empty">Nenhuma corrida ainda. Dê uma volta e volte aqui.</span>';el.appendChild(li);return;}
@@ -104,7 +123,15 @@ $('menu').addEventListener('click',e=>{
 });
 $('shopList').addEventListener('click',e=>{
   const art=e.target.closest('.car');if(!art)return;
-  const id=art.dataset.id, btn=e.target.closest('button');
+  const id=art.dataset.id, sw=e.target.closest('[data-paint]');
+  if(sw){
+    save.colors=save.colors||{};
+    if(sw.dataset.paint==='orig')delete save.colors[id];else save.colors[id]=+sw.dataset.paint;
+    persist();showCarModel(id);renderShop();
+    const again=$('shopList').querySelector('.car[data-id="'+id+'"] [data-paint="'+sw.dataset.paint+'"]');if(again)again.focus();
+    return;
+  }
+  const btn=e.target.closest('button');
   if(btn&&!btn.disabled){
     const c=carById(id);
     if(btn.dataset.act==='buy'&&save.coins>=c.price&&!save.owned.includes(id)){

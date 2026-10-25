@@ -97,6 +97,14 @@ const tmpl = wheelParts.filter((w) => w.c[2] > 0 && w.c[0] < 0)[0];
 const wr = (tmpl.b.hi[1] - tmpl.b.lo[1]) / 2, ww = tmpl.b.hi[0] - tmpl.b.lo[0];
 const axle = (front) => { const l = wheelParts.filter((w) => (w.c[2] < 0) === front); return [l.reduce((s, w) => s + Math.abs(w.c[0]), 0) / 2, l.reduce((s, w) => s + w.c[2], 0) / 2]; };
 const [fx, fz] = axle(true), [rx, rz] = axle(false);
+/* freios (disco, pinça, cubo): peças pequenas dentro do vão de cada roda. Os da frente vêm esterçados junto com
+   as rodas do modelo e atravessariam a roda reta; são trocados por cópias dos traseiros do mesmo lado */
+const nearWheel = (l, w) => { const c = cen(l); return Math.sign(c[0]) === Math.sign(w.c[0]) && Math.abs(Math.abs(c[0]) - Math.abs(w.c[0])) < 0.35 && Math.hypot(c[1] - w.c[1], c[2] - w.c[2]) < wr * 1.1; };
+const brakeOf = (front) => Object.values(comps).filter((l) => !inWheel.has(l[0]) && wheelParts.some((w) => (w.c[2] < 0) === front && nearWheel(l, w)));
+const dropFront = new Set(brakeOf(true).flat());
+const copies = brakeOf(false).flat().map((t) => ({ mat: t.mat, v: t.v.map((p) => [p[0] + Math.sign(p[0]) * (fx - rx), p[1], p[2] + (fz - rz)]) }));
+for (let i = tris.length - 1; i >= 0; i--) if (dropFront.has(tris[i])) tris.splice(i, 1);
+tris.push(...copies);
 
 /* ---------- papéis por posição (ex.: vermelho de trás = lanterna) ---------- */
 const roles = Object.assign({}, CFG.roles);

@@ -84,3 +84,10 @@
   .legend,.keys{display:none}
   .btn{min-height:46px}
 }
+/* loja: amostras de cor do carro selecionado */
+.paint{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:6px;border-top:1px solid var(--line)}
+.paint span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.paint button{appearance:none;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,244,226,.35);background:var(--sw);cursor:pointer;padding:0}
+.paint button.orig{background:linear-gradient(135deg,var(--sw) 0 45%,var(--paper) 45% 55%,var(--sw) 55%)}
+.paint button[aria-checked="true"]{border-color:var(--sun);box-shadow:0 0 0 2px var(--ink),0 0 0 4px var(--sun)}
+.paint button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
