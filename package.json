@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --open /corrida.html"
+    "preview": "vite preview --open /corrida.html",
+    "models": "node tools/glb2car.mjs assets/models/ry7.glb ry7"
   },
   "devDependencies": {
     "vite": "6.0.7",

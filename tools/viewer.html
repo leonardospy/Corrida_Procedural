@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Visualizador de modelo</title>
+<style>html,body{margin:0;height:100%;background:#20232b;color:#eee;font:13px system-ui}#info{position:fixed;left:8px;top:8px}</style>
+</head>
+<body>
+<div id="info"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+/* Ferramenta de apoio: abre um .glb (?f=caminho) e destaca um material com hl('nome'); vista com view(yaw,pitch,dist) */
+const R=new THREE.WebGLRenderer({antialias:true});R.setSize(innerWidth,innerHeight);document.body.appendChild(R.domElement);
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,0.01,5000);
+S.add(new THREE.HemisphereLight(0xffffff,0x444455,1.1));const dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(3,5,2);S.add(dl);
+let root=null,size=1;const meshes=[];
+new THREE.GLTFLoader().load(new URLSearchParams(location.search).get('f'),function(g){
+  root=g.scene;S.add(root);R.setClearColor(0x20232b);
+  /* materiais "unlit" do Sketchfab guardam a cor no emissive: usa ela como cor */
+  const em={};(g.parser.json.materials||[]).forEach(m=>{em[m.name]=m.emissiveFactor;});
+  root.traverse(o=>{if(o.isMesh&&em[o.material.name]){const e=em[o.material.name];o.material=new THREE.MeshLambertMaterial({color:new THREE.Color(e[0],e[1],e[2]),side:THREE.DoubleSide,name:o.material.name});}});
+  const b=new THREE.Box3().setFromObject(root),c=b.getCenter(new THREE.Vector3());size=b.getSize(new THREE.Vector3()).length();
+  root.position.sub(c);
+  root.traverse(o=>{if(o.isMesh){o.userData.orig=o.material;meshes.push(o);}});
+  document.getElementById('info').textContent='pronto: '+meshes.length+' malhas';window.ready=true;view(0.6,0.3,1.4);
+});
+window.view=function(yaw,pitch,d){d=(d||1.4)*size;C.position.set(Math.sin(yaw)*Math.cos(pitch)*d,Math.sin(pitch)*d,Math.cos(yaw)*Math.cos(pitch)*d);C.lookAt(0,0,0);R.render(S,C);};
+window.hl=function(name){meshes.forEach(m=>{m.material=(!name||m.userData.orig.name===name)?m.userData.orig:new THREE.MeshBasicMaterial({color:0x333333,transparent:true,opacity:0.12});});document.getElementById('info').textContent=name||'todos';};
+window.mats=()=>[...new Set(meshes.map(m=>m.userData.orig.name))];
+</script>
+</body>
+</html>

@@ -32,6 +32,23 @@ Carros 01.js          modelos de carro anteriores (cópia de src/js/vehicles.js 
 Variáveis que só um módulo altera ficam nele (`export let`) e os outros só leem.
 As que vários módulos alteram ficam em `ST` (`src/js/shared.js`).
 
+## Carros importados (.glb)
+
+O RY 7 vem de um modelo 3D: `assets/models/ry7.glb`. Para editar, abra o `.glb` no Blender, salve por cima
+e gere de novo o módulo do jogo:
+
+```bash
+npm run models
+```
+
+O conversor ([tools/glb2car.mjs](tools/glb2car.mjs)) põe o carro de frente para -z, com o chão em y=0 e 4,3 m de
+comprimento, separa as rodas (para girarem) e grava `src/js/models/ry7.js`. No topo desse arquivo dá para trocar a
+cor e o papel de cada material (lataria, vidro, farol, lanterna, pisca). Para conferir as peças de um `.glb`:
+`npm run dev` e abra `/tools/viewer.html?f=/assets/models/ry7.glb`.
+
+Crédito: "Mazda RX7 Stylised", de SheldonJ99 (https://sketchfab.com/3d-models/mazda-rx7-stylised-898e9be8c8964f6298188a2901216e80),
+licença CC BY 4.0.
+
 ## Desenvolver
 
 ES modules não abrem via `file://`. Use o servidor local:

@@ -2,6 +2,50 @@
    A versão anterior está guardada em "Carros 01.js". Frente do carro em -z. */
 import {M} from './scene.js';
 import {H,PB,PCy,UB,geo,haloArr,tm} from './geometry.js';
+import * as RY7 from './models/ry7.js';
+
+/* ---------- Carros importados (.glb convertido por tools/glb2car.mjs) ---------- */
+const MODELS={ry7:RY7};
+/* corpo e luzes a partir dos grupos de material; body = cor nova da lataria (opcional) */
+function modelGeo(md,body){
+  const P=[[],[],[]],Cc=[[],[],[]],tail=[[0,0,0,0],[0,0,0,0]];
+  md.BODY.forEach(function(g){
+    const m=md.MATS[g.mat],lit=m.role==='head'||m.role==='tail'||m.role==='signal',k=lit?1:0;
+    const c=hexRGB(m.role==='body'&&body!==undefined?body:m.color);
+    for(let i=0;i<g.pos.length;i+=3){
+      const x=g.pos[i]/1000,y=g.pos[i+1]/1000,z=g.pos[i+2]/1000;
+      P[k].push(x,y,z);Cc[k].push(c[0],c[1],c[2]);
+      if(m.role==='tail'){const t=tail[x<0?0:1];t[0]+=x;t[1]+=y;t[2]+=z;t[3]++;}
+    }
+  });
+  /* um brilho em cada lado, no centro das lanternas */
+  const hl=tail.filter(t=>t[3]).map(t=>H(t[0]/t[3],t[1]/t[3],t[2]/t[3]+0.08,0.55,0xff2a1a));
+  if(hl.length){const h=haloArr(hl);P[2]=h.P;Cc[2]=h.C;}
+  return packArr(P,Cc);
+}
+/* roda do modelo: a esquerda vem pronta; a direita é espelhada (inverte o sentido das faces) */
+function modelWheel(md,mirror){
+  const P=[],Cc=[];
+  md.WHEEL.forEach(function(g){
+    const c=hexRGB(md.MATS[g.mat].color);
+    for(let i=0;i<g.pos.length;i+=9){
+      const tri=[0,1,2].map(n=>[g.pos[i+n*3]/1000*(mirror?-1:1),g.pos[i+n*3+1]/1000,g.pos[i+n*3+2]/1000]);
+      (mirror?[0,2,1]:[0,1,2]).forEach(function(n){P.push(tri[n][0],tri[n][1],tri[n][2]);Cc.push(c[0],c[1],c[2]);});
+    }
+  });
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(Cc,3));
+  g.computeVertexNormals();return g;
+}
+function packArr(P,Cc){
+  const n0=P[0].length,n1=P[1].length,n2=P[2].length,A=new Float32Array(n0+n1+n2),B=new Float32Array(n0+n1+n2);
+  A.set(P[0]);A.set(P[1],n0);A.set(P[2],n0+n1);B.set(Cc[0]);B.set(Cc[1],n0);B.set(Cc[2],n0+n1);
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(A,3));g.setAttribute('color',new THREE.BufferAttribute(B,3));
+  g.computeVertexNormals();
+  g.addGroup(0,n0/3,0);g.addGroup(n0/3,n1/3,1);if(n2)g.addGroup((n0+n1)/3,n2/3,2);
+  return g;
+}
 
 /* ---------- Seção transversal ----------
    Cada estação (zn = posição de -0.5 a 0.5 do comprimento) tem: w meia-largura (fração de W), yb fundo, ys topo da lateral,
@@ -363,14 +407,32 @@ export const truckGeo=(cargo,cab,stripe)=>vehGeo(TRAFFIC.truck(cargo,cab,stripe)
 export const CARS=[
   {id:'pulga',name:'Pulga',price:0,accel:12,vmax:52},
   {id:'gt',name:'Evo R',price:400,accel:16,vmax:60},
+  {id:'ry7',name:'RY 7',price:800,accel:18,vmax:64},
   {id:'cupe',name:'Rotor 7',price:1200,accel:19,vmax:66},
   {id:'muscle',name:'Mark IV',price:2500,accel:26,vmax:64},
   {id:'veloce',name:'Quattro V10',price:5000,accel:21,vmax:74},
   {id:'hiper',name:'Touro X',price:9000,accel:24,vmax:84}
 ];
+/* RY 7: modelo importado (Mazda RX7 Stylised, de SheldonJ99, CC-BY 4.0) */
+CARSPEC.ry7={model:'ry7',c:0xf4f4f4};
 CARS.forEach(function(c){c.c=CARSPEC[c.id].c;});
 export const carById=id=>CARS.find(c=>c.id===id)||CARS[0];
+function makeModelCar(s){
+  const md=MODELS[s.model],m=md.META,g=new THREE.Group(),wheels=[];
+  g.add(new THREE.Mesh(modelGeo(md,s.body),[M.vcolD,M.lights,M.halo]));
+  const wl=modelWheel(md,false),wr=modelWheel(md,true);
+  [[m.front,true],[m.rear,false]].forEach(function(a){
+    [-1,1].forEach(function(sx){
+      const piv=new THREE.Group();piv.position.set(sx*a[0][0],m.wheelR,a[0][1]);
+      const mesh=new THREE.Mesh(sx<0?wl:wr,M.vcolD);piv.add(mesh);g.add(piv);
+      wheels.push({piv:piv,mesh:mesh,front:a[1]});
+    });
+  });
+  g.userData={wheels:wheels,r:m.wheelR,wx:m.rear[0],wz:m.rear[1]};
+  return g;
+}
 export function makeCar(id){
+  if(CARSPEC[id]&&CARSPEC[id].model)return makeModelCar(CARSPEC[id]);
   const s=CARSPEC[id]||CARSPEC.pulga, g=new THREE.Group();
   g.add(new THREE.Mesh(vehGeo(s,false),[M.vcol,M.lights,M.halo]));
   const wg=wheelGeo(s.r,s.ww,s.rimStyle,s.rim), wheels=[], ws=wheelsOf(s);

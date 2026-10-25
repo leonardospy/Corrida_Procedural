@@ -148,6 +148,8 @@ export const headPool=(function(){
 M.wrench=mk({vertexColors:true,emissive:0x2b5d72});
 /* túneis: montanha (cor da paleta), revestimento interno e estrutura da passagem subterrânea */
 M.hill=mk({color:0x7a6aa0,side:THREE.DoubleSide});
+/* carros importados de .glb: as peças finas (asa, retrovisor) precisam das duas faces */
+M.vcolD=mk({vertexColors:true,side:THREE.DoubleSide});
 M.tube=mk({vertexColors:true,side:THREE.DoubleSide});
 M.upw=mk({vertexColors:true,side:THREE.DoubleSide},true);
 M.tlamp=patch(new THREE.MeshBasicMaterial({color:0xfff0c8}),true);
