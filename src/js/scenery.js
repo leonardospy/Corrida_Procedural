@@ -92,6 +92,8 @@ function drawRecord(d){
 const props={sgNext:300,bbNext:180,recD:0,recAt:-1e9,recOn:false};
 /* primeiro ponto a partir de d sem cruzamento, túnel, passagem subterrânea nem a placa do recorde */
 const freeFrom=(d,m)=>{for(let k=0;k<40&&(busyAt(d,m)||Math.abs(d-props.recAt)<40);k++)d+=L;return d;};
+/* pula as placas para a distância d (início direto no chefe) */
+export function skipProps(d){props.sgNext=d+150;props.bbNext=d+90;props.recOn=props.recAt<d;}
 export function resetProps(){
   props.sgNext=300;props.bbNext=180;
   props.recAt=-1e9;props.recD=save.bestD||0;props.recAt=props.recD>=100?freeFrom(props.recD,8):-1e9;

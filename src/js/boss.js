@@ -9,7 +9,7 @@ import {makePolice} from './vehicles.js';
 import {spawn} from './generator.js';
 import {damage} from './race.js';
 import {toast} from './hud.js';
-import {blip,noise,sirenLevel} from './audio.js';
+import {blip,musicOn,noise,sirenLevel} from './audio.js';
 import {explode} from './effects.js';
 
 /* para criar outro chefe, basta outra linha aqui (at = início em metros, len = duração da batalha) */
@@ -25,7 +25,7 @@ const B={i:-1,phase:'idle',t:0,d:0,x:0,lane:1,tx:0,laneT:0,dropT:0,hitDone:false
 const el={box:$('boss'),name:$('bossName'),bar:$('bossBar'),lanes:$('bossLanes')};
 
 export function resetBoss(){
-  B.i=-1;B.phase='idle';cop.g.visible=false;warn.visible=false;el.box.hidden=true;sirenLevel(0);
+  B.i=-1;B.phase='idle';cop.g.visible=false;warn.visible=false;el.box.hidden=true;sirenLevel(0);musicOn(false);
 }
 /* a pista fica limpa um pouco antes do chefe até ele sair de cena */
 export function bossClear(d){
@@ -45,7 +45,7 @@ export function updateBoss(dt,now){
     if(n<0)return;
     B.i=n;B.phase='warn';B.t=0;B.lane=ST.lane;   /* vem pela faixa onde o jogador está: é preciso sair dela */
     el.box.hidden=false;el.name.textContent=BOSSES[n].name;el.bar.style.transform='scaleX(1)';laneUI(true);
-    toast('Polícia!','Saia da faixa marcada');blip(700,1100,0.3,'square',0.06);
+    toast('Polícia!','Saia da faixa marcada');musicOn(true);blip(700,1100,0.3,'square',0.06);
   }
   const b=BOSSES[B.i];
   B.t+=dt;
@@ -81,7 +81,11 @@ export function updateBoss(dt,now){
     B.x+=(B.tx-B.x)*(1-Math.exp(-dt*3.2));
     B.spin=-(B.tx-B.x)*0.05;
     if(B.dropT<=0&&Math.abs(B.tx-B.x)<0.3){
-      spawn('spike',B.d-cop.hz-1.2,B.x,0);blip(220,140,0.12,'square',0.05);
+      /* às vezes os espinhos caem em duas faixas de uma vez; a terceira fica sempre livre */
+      const lanes=[B.lane];
+      if(Math.random()<0.45){const o=[0,1,2].filter(l=>l!==B.lane);lanes.push(o[(Math.random()*o.length)|0]);}
+      lanes.forEach(function(l){spawn('spike',B.d-cop.hz-1.2,l===B.lane?B.x:LANES[l],0);});
+      blip(220,140,0.12,'square',0.05);
       B.dropT=1.1+Math.random()*1.0;
     }
     if(ST.dist>=b.at+b.len){
@@ -94,7 +98,7 @@ export function updateBoss(dt,now){
     sirenLevel(Math.max(0,0.7-B.t));
     if(B.t>1.0||Math.abs(B.x)>11){
       explode(B.x,0.8,-B.d);noise(1.2,0.6,500);blip(120,30,0.8,'sawtooth',0.15);
-      cop.g.visible=false;B.phase='idle';el.box.hidden=true;sirenLevel(0);   /* pronto para o próximo chefe da lista */
+      cop.g.visible=false;B.phase='idle';el.box.hidden=true;sirenLevel(0);musicOn(false);   /* pronto para o próximo chefe da lista */
       ST.coins+=b.reward;toast('Polícia fora!','+'+b.reward+' moedas');
       return;
     }

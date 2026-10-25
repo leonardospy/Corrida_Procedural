@@ -118,6 +118,7 @@ $('menu').addEventListener('click',e=>{
   const go=b.dataset.go;
   audioInit();
   if(go==='play')startRun();
+  else if(go==='bosstest')startRun(true);
   else if(go==='quit'){try{window.close();}catch(x){}showPanel('quit');}
   else showPanel(go);
 });

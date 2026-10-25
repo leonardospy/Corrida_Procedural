@@ -1,21 +1,21 @@
 /* Ciclo da corrida: início, fim, pausa e batidas */
 import {ST} from './shared.js';
 import {$} from './dom.js';
-import {BEHIND_T,CONFUSE_T,LEVEL_M,V0,clamp,fmt} from './config.js';
+import {BEHIND_T,CONFUSE_T,L,LEVEL_M,V0,clamp,fmt,speedAt} from './config.js';
 import {carById} from './vehicles.js';
 import {gantries} from './obstacles.js';
-import {resetProps} from './scenery.js';
+import {resetProps,skipProps} from './scenery.js';
 import {I,hideI,sw} from './track.js';
 import {persist,save} from './save.js';
 import {showCarModel} from './player.js';
 import {coinList,obstacles,wrenchList} from './state.js';
-import {releaseObstacle,resetGen} from './generator.js';
+import {gen,releaseObstacle,resetGen} from './generator.js';
 import {debris,dust,smokeP,spawnDebris} from './effects.js';
 import {audioInit,blip,noise} from './audio.js';
 import {hud,hudUpdate,toast,updateHp} from './hud.js';
 import {showPanel} from './menu.js';
 import {camTargets} from './render.js';
-import {resetBoss} from './boss.js';
+import {BOSSES,resetBoss} from './boss.js';
 
 /* ------------------------------------------------------------------ */
 /* Ciclo da corrida                                                    */
@@ -43,17 +43,27 @@ export function resetRun(){
   ST.hSc=ST.hDist=ST.hCoins=ST.hKmh=ST.hLvl=ST.hStage=-1;
   updateHp();
 }
+/* leva a corrida direto para a distância d, com o gerador, a pista e as placas acertados para lá */
+function jumpTo(d){
+  ST.dist=d;ST.speed=Math.min(speedAt(d),ST.cur.vmax)*0.8;
+  gen.z=d+40;gen.xi=Math.ceil(d/L);gen.wzNext=d+2000;gen.rampZ=d+300;gen.wrZ=d+300;gen.pedZ=d+200;gen.anZ=d+200;gen.end=d;gen.lastD=[d,d,d];
+  ST.lastTile=Math.floor(d/L)-BEHIND_T-1;
+  ST.lastLevel=Math.floor(d/LEVEL_M)+1;ST.lastStage=Math.floor(d/ST.STAGE_M);ST.gantryNext=Math.ceil(d/LEVEL_M)*LEVEL_M;
+  skipProps(d);
+}
 export function snapCamera(){
   const c=camTargets();
   ST.camX=c.tx;ST.camY=c.ty;ST.camO=c.to;ST.lkX=c.lx;ST.lkY=c.ly;ST.lkO=c.lo;ST.vox=c.tox;ST.voy=c.toy;
 }
-export function startRun(){
+/* bossTest: começa pouco antes do primeiro chefe (botão de teste do menu; essa corrida não conta recorde nem moedas) */
+export function startRun(bossTest){
   if(cutting)return;
   audioInit();
   cut(()=>{
     ST.cur=carById(save.car);showCarModel(save.car);
     resetRun();ST.menuK=0;
-    ST.speed=8;ST.state='play';ST.runSaved=false;
+    ST.speed=8;ST.state='play';ST.runSaved=false;ST.testRun=bossTest===true;
+    if(ST.testRun)jumpTo(BOSSES[0].at-260);
     $('menu').hidden=true;$('ovOver').hidden=true;$('ovPause').hidden=true;hud.hidden=false;
     snapCamera();hudUpdate();toast('Largada','Nível 1');
   });
@@ -70,6 +80,7 @@ export function finishRun(){
   if(ST.runSaved)return {sc:0,rec:false};
   ST.runSaved=true;
   const sc=Math.floor(ST.dist)+ST.coins*10;
+  if(ST.testRun)return {sc:sc,rec:false};
   save.coins+=ST.coins;
   const prevBest=save.best||0, rec=sc>prevBest&&sc>0;
   if(rec)save.best=sc;
