@@ -15,6 +15,7 @@ import {audioInit,blip,noise} from './audio.js';
 import {hud,hudUpdate,toast,updateHp} from './hud.js';
 import {showPanel} from './menu.js';
 import {camTargets} from './render.js';
+import {resetBoss} from './boss.js';
 
 /* ------------------------------------------------------------------ */
 /* Ciclo da corrida                                                    */
@@ -36,7 +37,7 @@ export function resetRun(){
   ST.carY=0;ST.carVy=0;ST.carVx=0;ST.carSpin=0;ST.carRz=0;ST.carRx=0;ST.airborne=false;ST.hop=false;ST.carPitch=0;ST.rampY=0;
   ST.hits=0;ST.inv=0;ST.confuse=0;ST.smokeAcc=0;ST.deathCause='hit';
   ST.lastLevel=1;ST.lastStage=0;ST.gantryNext=LEVEL_M;
-  releaseAll();resetGen();
+  releaseAll();resetGen();resetBoss();
   for(const k in I){for(let i=0;i<I[k].count;i++)hideI(I[k],i);}
   ST.lastTile=-BEHIND_T-1;ST.dirty=true;
   ST.hSc=ST.hDist=ST.hCoins=ST.hKmh=ST.hLvl=ST.hStage=-1;
@@ -122,10 +123,16 @@ export function hitObstacle(o){
     return;
   }
   if(ST.inv>0)return;
+  if(o.kind==='hole'){o.kind='deco';damage('Buraco!');return;}   /* o buraco fica na pista, mas não acerta de novo */
   o.hit=true;o.vx=(o.x>=ST.px?1:-1)*(4+Math.random()*3);o.vy=5;o.spin=(Math.random()-0.5)*5;
+  damage(o.kind==='spike'?'Espinhos!':'Batida!');
+}
+/* 1 de dano no casco (batida, buraco, espinhos, polícia); 3 danos destroem o carro */
+export function damage(title){
+  if(ST.inv>0||ST.state!=='play')return;
   ST.hits++;updateHp();
   if(ST.hits>=3){crash('wreck');return;}
   ST.inv=0.8;ST.speed=Math.max(ST.speed*0.72,V0*0.6);ST.shake=0.9;
   spawnDebris(0.5);noise(0.35,0.35,1100);
-  toast(ST.hits===1?'Batida!':'Casco crítico!',ST.hits===1?'Restam 2 batidas':'Mais uma e acabou');
+  toast(ST.hits===1?title:'Casco crítico!',ST.hits===1?'Restam 2 batidas':'Mais uma e acabou');
 }

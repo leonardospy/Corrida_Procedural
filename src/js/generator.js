@@ -4,7 +4,8 @@ import {AHEAD,L,LANES,MAXC,cfg,clamp,diff,lerp,speedAt} from './config.js';
 import {M,scene} from './scene.js';
 import {makeBeacon} from './geometry.js';
 import {OB} from './obstacles.js';
-import {cityCore,cityK,isX} from './track.js';
+import {cityCore,cityK,desertAt,isX} from './track.js';
+import {bossClear} from './boss.js';
 import {GJ,coinList,obstacles,pools,wrenchList} from './state.js';
 import {busyAt,underOf} from './tunnels.js';
 
@@ -79,7 +80,7 @@ function pickVeh(t){
 }
 /* visual do pedestre: executivos de terno no centro da cidade, gente comum no resto */
 const pedLook=d=>cityCore(Math.round(d/L))>0.5&&Math.random()<0.7?4+((Math.random()*2)|0):(Math.random()*4)|0;
-function spawn(type,d,x,ry){
+export function spawn(type,d,x,ry){
   const def=OB[type], vi=type==='ped'?pedLook(d):(Math.random()*def.geos.length)|0, key=type+vi;
   const pool=pools[key]||(pools[key]=[]);
   let mesh=pool.pop();
@@ -128,12 +129,13 @@ function addPed(d,avoid){
     spawn('ped',d,LANES[ls[(Math.random()*ls.length)|0]],Math.PI);
   }
 }
-function spawnAnimal(d,safe){
-  const type=['deer','deer','fox','rabbit'][(Math.random()*4)|0], side=Math.random()<0.5?-1:1, def=OB[type];
+function spawnAnimal(d,safe,desert){
+  /* no deserto: feneco e lagarto; na mata: cervo, raposa e coelho */
+  const type=desert?['fennec','lizard','lizard'][(Math.random()*3)|0]:['deer','deer','fox','rabbit'][(Math.random()*4)|0], side=Math.random()<0.5?-1:1, def=OB[type];
   const ls=[0,1,2].filter(function(l){return l!==safe;}), li=ls[(Math.random()*ls.length)|0];
   const o=spawn(type,d,side*9.2,side>0?Math.PI/2:-Math.PI/2);
   o.walk=true;o.animal=true;o.x0=side*9.2;o.dir=-side;o.xs=LANES[li];
-  o.vs=type==='deer'?2.4:(type==='fox'?3.0:2.6);o.v=o.vs;o.ph=0;o.an=0;
+  o.vs=type==='deer'?2.4:(type==='fox'||type==='fennec'?3.0:2.6);o.v=o.vs;o.ph=0;o.an=0;
   o.gt=type==='rabbit'?1/0.8:(type==='fox'?1/0.5:1/0.9);
   o.g0=def.geos[0];o.gw=def.walkG;o.hop=type==='rabbit'?0.28:0.05;
   o.lead=Math.abs(o.x0-o.xs)/o.vs+1.0;
@@ -165,7 +167,7 @@ export function updAnimal(o,dt,m){
 export function genCross(){
   while(gen.xi*L<ST.dist+AHEAD-24){
     const i=gen.xi++;
-    if(!isX(i)||underOf(i))continue;   /* sobre a passagem subterrânea o cruzamento fica lá em cima, fora do caminho */
+    if(!isX(i)||underOf(i)||bossClear(i*L))continue;   /* sem trânsito no trecho do chefe; sobre a passagem subterrânea o cruzamento fica lá em cima, fora do caminho */
     /* todos cruzam no mesmo sentido, com a mesma velocidade e bem espaçados; sem caminhões: assim a via nunca fecha por inteiro */
     const n=Math.random()<0.92?2+((Math.random()*3)|0):0;
     const side=Math.random()<0.5?-1:1, vx=13+Math.random()*5, gapT=22/vx, off=1.0+Math.random()*1.8;
@@ -201,15 +203,19 @@ export function genWork(){
   const q=gen.wzQ;
   while(q.length&&q[0].d<ST.dist+AHEAD-8){
     const e=q.shift();
+    if(bossClear(e.d))continue;
     spawn(e.type,e.d,e.x,(e.type==='cones'||e.type==='barrels')?(Math.random()-0.5)*0.4:0);
   }
 }
 export function genRow(){
   const d=gen.z, t=diff(d), v=Math.min(speedAt(d),ST.cur.vmax);
+  /* trecho do chefe: pista completamente limpa */
+  if(bossClear(d)){gen.z=d+24;gen.end=d;gen.lastD=[d,d,d];return;}
+  const desert=desertAt(d)>0.5;
   const ix=Math.round(d/L), inX=isX(ix)&&Math.abs(d-ix*L)<10;
   /* trecho de obras: uma via estragada, sinalizada de ponta a ponta; as outras duas seguem livres */
   if(gen.wz&&d>gen.wz.ze+30){gen.wzNext=gen.wz.ze+900+Math.random()*900;gen.wz=null;}
-  if(!gen.wz&&d>=gen.wzNext-260&&t>0.02)makeZone(d);
+  if(!gen.wz&&d>=gen.wzNext-260&&t>0.02&&!desert)makeZone(d);   /* no deserto não há obras: o obstáculo fixo é o buraco */
   const zA=gen.wz&&d>=gen.wz.zs-156&&d<=gen.wz.ze+12?gen.wz:null;
   const zon=gen.wz&&d>=gen.wz.zs-46&&d<=gen.wz.ze+12?gen.wz:null;
   if(gen.chic===0&&t>0.25&&Math.random()<0.10+0.22*t)gen.chic=2+((Math.random()*3)|0);
@@ -234,11 +240,16 @@ export function genRow(){
     if(l===safe)continue;
     if(zA&&l===zA.l)continue;
     if(l===rampLane){
-      spawn('ramp',d,LANES[l],0);gen.lastD[l]=d+OB.ramp.hz;
+      spawn(desert?'dune':'ramp',d,LANES[l],0);gen.lastD[l]=d+OB.ramp.hz;   /* no deserto a rampa é uma duna */
       hz=Math.max(hz,OB.ramp.hz);placed++;gen.force=l;gen.rampZ=d+300+Math.random()*260;
       continue;
     }
-    if(Math.random()<p&&!(nearX&&placed>=1)){
+    if(desert&&Math.random()<p*0.55){
+      /* buraco parado na via */
+      spawn('hole',d,LANES[l]+(Math.random()-0.5)*0.6,Math.random()*6.28);gen.lastD[l]=d+OB.hole.hz;
+      hz=Math.max(hz,OB.hole.hz);placed++;info[l]=OB.hole.hz;continue;
+    }
+    if(Math.random()<p*(desert?0.6:1)&&!(nearX&&placed>=1)){
       /* todo veículo está rodando: sai de trás e chega à posição da fileira justamente quando o jogador o alcança */
       const type=pickVeh(t), def=OB[type];
       let fv=Math.min(7+Math.random()*7,0.6*v);if(type==='truck')fv=Math.min(fv,9);
@@ -284,7 +295,7 @@ export function genRow(){
   /* pedestres: raros, com distância mínima entre eles e fora da via livre */
   /* animais só na mata: um deles pula na estrada de vez em quando */
   if(cityK(Math.round((d+gap*0.5)/L))<0.2&&!inX&&gap>26&&d>=gen.anZ&&rampLane<0&&!busyAt(d+gap*0.5,10)){
-    spawnAnimal(d+gap*0.5,safe);
+    spawnAnimal(d+gap*0.5,safe,desertAt(d+gap*0.5)>0.5);
     gen.force=safe;   /* a via livre continua a mesma depois do animal */
     gen.anZ=d+gap+150+Math.random()*230;
   }

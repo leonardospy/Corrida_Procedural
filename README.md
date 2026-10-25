@@ -19,6 +19,7 @@ src/js/
   track.js            pista: malhas instanciadas, cidade e mata
   tunnels.js          túneis na mata, passagens subterrâneas na cidade, trechos sem placas
   post.js             estilo gráfico Desenho (contornos e cores vivas; escolha em Ajustes)
+  boss.js             chefes em distâncias fixas (lista BOSSES); hoje: Polícia aos 20 km, por 5 km
   generator.js        gerador procedural de obstáculos e moedas
   physics.js          movimento, colisões, saltos e coleta
   race.js             início/fim da corrida, pausa, batidas

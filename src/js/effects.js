@@ -1,7 +1,7 @@
 /* Efeitos: destroços, fumaça, poeira e rodas */
 import {ST} from './shared.js';
 import {LANES,NDEB,NDUST,NSM,clamp} from './config.js';
-import {M} from './scene.js';
+import {M,patch,scene} from './scene.js';
 import {I,dummy,hideI,setI} from './track.js';
 import {car} from './player.js';
 
@@ -10,6 +10,27 @@ import {car} from './player.js';
 /* ------------------------------------------------------------------ */
 export const debris=[];
 for(let i=0;i<NDEB;i++)debris.push({p:new THREE.Vector3(),v:new THREE.Vector3(),r:new THREE.Vector3(),life:0});
+/* explosão: bola de fogo que cresce e some, clarão de luz e destroços espalhados a partir de (x,y,z) */
+const fire=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),patch(new THREE.MeshBasicMaterial({color:0xffa040,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false})));
+fire.visible=false;scene.add(fire);
+const flash=new THREE.PointLight(0xffa040,0,40,1.5);scene.add(flash);
+let fireT=-1;
+export function explode(x,y,z){
+  fireT=0;fire.position.set(x,y,z);flash.position.set(x,y+1,z);fire.visible=true;
+  debris.forEach((d)=>{
+    d.p.set(x+(Math.random()-0.5)*1.5,y,z+(Math.random()-0.5)*2);
+    d.v.set((Math.random()-0.5)*16,6+Math.random()*12,(Math.random()-0.5)*16);
+    d.r.set(Math.random()*8,Math.random()*8,Math.random()*8);
+    d.life=1.4+Math.random()*1.0;
+  });
+}
+function updateFire(dt){
+  if(fireT<0)return;
+  fireT+=dt;const k=fireT/1.1;
+  if(k>=1){fireT=-1;fire.visible=false;flash.intensity=0;return;}
+  fire.scale.setScalar(1+k*5);fire.material.opacity=0.95*(1-k);fire.material.color.setHSL(0.08-0.06*k,1,0.6-0.25*k);
+  flash.intensity=8*(1-k);
+}
 export function spawnDebris(frac){
   debris.forEach((d,i)=>{
     if(i/NDEB>=frac)return;
@@ -21,6 +42,7 @@ export function spawnDebris(frac){
 }
 const eul=new THREE.Euler();
 export function updateDebris(dt){
+  updateFire(dt);
   debris.forEach((d,i)=>{
     if(d.life>0){
       d.life-=dt;d.v.y-=24*dt;d.p.addScaledVector(d.v,dt);

@@ -142,6 +142,68 @@ function patchGeo(){
   [[0.3,-4.4],[-1.0,0.2],[0.9,3.1],[-0.5,5.0]].forEach(function(g){p.push(PB(0.3,0.06,0.25,g[0],0.06,g[1],0x8a7a69));});
   return geo(p);
 }
+/* ---------- Deserto ---------- */
+/* duna de areia na pista: sobe de z=+3.6 até o topo (z≈+0.3, 1,1 m) e desce atrás — faz o carro saltar como a rampa */
+function duneGeo(tone){
+  const prof=[[3.7,0],[2.6,0.36],[1.5,0.74],[0.3,1.1],[-0.9,0.92],[-2.1,0.45],[-3.2,0]], P=[],C=[];
+  const sec=(z,y)=>{const hw=1.45-y*0.25;return [[-hw-0.25,0,z],[-hw*0.75,y*0.85,z],[0,y,z],[hw*0.75,y*0.85,z],[hw+0.25,0,z]];};
+  const col=[new THREE.Color(tone),new THREE.Color(tone).multiplyScalar(0.86)];
+  for(let k=0;k<prof.length-1;k++){
+    const A=sec(prof[k][0],prof[k][1]),B=sec(prof[k+1][0],prof[k+1][1]);
+    for(let g=0;g<4;g++){
+      const c=col[(g===0||g===3)?1:0];
+      [[A[g],A[g+1],B[g+1]],[A[g],B[g+1],B[g]]].forEach(function(t){t.forEach(function(v){P.push(v[0],v[1],v[2]);C.push(c.r,c.g,c.b);});});
+    }
+  }
+  /* marcas de vento na areia */
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
+  g.computeVertexNormals();
+  const rip=geo([PB(2.2,0.02,0.08,0,0.62,1.8,0xc9a466),PB(2.0,0.02,0.08,0,0.95,0.9,0xc9a466),PB(2.1,0.02,0.08,0,0.78,-1.3,0xc9a466)]);
+  const out=geoMerge([g,rip]);return out;
+}
+function geoMerge(list){
+  const P=[],C=[];list.forEach(function(g){const a=g.index?g.toNonIndexed():g;P.push(...a.attributes.position.array);C.push(...a.attributes.color.array);});
+  const o=new THREE.BufferGeometry();o.setAttribute('position',new THREE.Float32BufferAttribute(P,3));o.setAttribute('color',new THREE.Float32BufferAttribute(C,3));o.computeVertexNormals();return o;
+}
+/* buraco no asfalto: borda quebrada e fundo escuro */
+function holeGeo(seed){
+  const parts=[],n=11,rnd=k=>{const x=Math.sin(seed*91.7+k*12.9)*43758.5;return x-Math.floor(x);};
+  const pit=[];for(let k=0;k<n;k++){const a=k/n*Math.PI*2,r=0.75+rnd(k)*0.35;pit.push([Math.cos(a)*r*1.1,Math.sin(a)*r*0.9]);}
+  const P=[],C=[],dark=new THREE.Color(0x0d0d10),rim=new THREE.Color(0x55555c);
+  for(let k=0;k<n;k++){
+    const a=pit[k],b=pit[(k+1)%n];
+    P.push(0,0.02,0, b[0],0.02,b[1], a[0],0.02,a[1]);for(let v=0;v<3;v++)C.push(dark.r,dark.g,dark.b);
+    P.push(a[0],0.02,a[1], b[0],0.02,b[1], b[0]*1.25,0.03,b[1]*1.25, a[0],0.02,a[1], b[0]*1.25,0.03,b[1]*1.25, a[0]*1.25,0.03,a[1]*1.25);for(let v=0;v<6;v++)C.push(rim.r,rim.g,rim.b);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.computeVertexNormals();
+  const bits=[];for(let k=0;k<6;k++){const a=rnd(k+20)*6.28,r=1.3+rnd(k+30)*0.5;bits.push({g:UB,m:tm(Math.cos(a)*r,0.05,Math.sin(a)*r,0.18+rnd(k)*0.2,0.07,0.14+rnd(k+5)*0.2,0,a,0),c:0x3c3d48});}
+  return geoMerge([g,geo(bits)]);
+}
+/* feneco (raposa do deserto): cor de areia e orelhas enormes */
+export function fennecGeo(a){
+  a=a||0;
+  const B=[PB(0.26,0.24,0.6,0,0.42,0,0xe2c08a),PB(0.22,0.22,0.26,0,0.54,-0.4,0xe2c08a),PB(0.08,0.08,0.1,0,0.5,-0.56,0x2a1d14),
+    PB(0.06,0.26,0.14,-0.09,0.78,-0.38,0xe2c08a),PB(0.06,0.26,0.14,0.09,0.78,-0.38,0xe2c08a),PB(0.03,0.2,0.09,-0.1,0.78,-0.39,0xf4c8b0),PB(0.03,0.2,0.09,0.1,0.78,-0.39,0xf4c8b0),
+    PB(0.14,0.14,0.42,0,0.46,0.48,0xe2c08a),PB(0.12,0.12,0.12,0,0.46,0.74,0x2a1d14)];
+  [[-0.08,-0.22,1],[0.08,-0.22,-1],[-0.08,0.22,-1],[0.08,0.22,1]].forEach(function(p){B.push(legB(p[0],0.3,p[1],0.3,0.06,a*p[2],0xc9a46c));});
+  return geo(B);
+}
+/* lagarto: corpo baixo e comprido, rabo fino, pernas abertas */
+export function lizardGeo(a){
+  a=a||0;
+  const B=[PB(0.24,0.1,0.55,0,0.12,0,0x7c8a4a),PB(0.18,0.08,0.2,0,0.12,-0.36,0x7c8a4a),PB(0.04,0.04,0.04,-0.07,0.15,-0.42,0x111111),PB(0.04,0.04,0.04,0.07,0.15,-0.42,0x111111),
+    PB(0.12,0.07,0.36,0,0.1,0.44,0x6c7a40),PB(0.07,0.05,0.34,0,0.08,0.78,0x6c7a40),PB(0.18,0.02,0.4,0,0.18,0,0xa0a060)];
+  [[-1,-0.15,1],[1,-0.15,-1],[-1,0.18,-1],[1,0.18,1]].forEach(function(p){B.push({g:UB,m:tm(p[0]*0.18,0.06,p[1]+a*p[2]*0.12,0.18,0.05,0.06,0,p[0]*a*p[2]*0.5,0),c:0x6c7a40});});
+  return geo(B);
+}
+/* tapete de espinhos jogado pela polícia */
+function spikeGeo(){
+  const B=[PB(2.9,0.05,0.34,0,0.03,0,0x22232a),PB(0.22,0.14,0.4,-1.5,0.07,0,0xffc24a),PB(0.22,0.14,0.4,1.5,0.07,0,0xffc24a)];
+  for(let k=0;k<12;k++){const x=-1.32+k*0.24;B.push(PCo(0.06,0.24,4,x,0.17,-0.08,0xc9ced6),PCo(0.06,0.24,4,x+0.12,0.17,0.08,0xc9ced6));}
+  return geo(B);
+}
+
 export const OB={
   patch:{kind:'deco',hw:0,hz:0,hh:0,geos:[patchGeo()]},
   cones:{kind:'fatal',hw:1.0,hz:0.9,hh:0.95,geos:[conesGeo()]},
@@ -155,6 +217,12 @@ export const OB={
   fox:{kind:'ped',hw:0.4,hz:0.6,hh:1.0,sc:1.8,geos:[foxGeo(0)],walkG:[foxGeo(0.6),foxGeo(-0.6)]},
   rabbit:{kind:'ped',hw:0.35,hz:0.45,hh:0.9,sc:2.2,geos:[rabbitGeo(0)],walkG:[rabbitGeo(0.7),rabbitGeo(-0.7)]},
   ramp:{kind:'ramp',hw:1.2,hz:4.6,hh:0,geos:[rampGeo(0xf2b705),rampGeo(0xff7a1a),rampGeo(0x2ec4b6)]},
+  /* deserto: a duna faz o papel da rampa, o buraco o dos obstáculos fixos */
+  dune:{kind:'ramp',hw:1.2,hz:4.6,hh:0,geos:[duneGeo(0xe2c48a),duneGeo(0xd8b47a)]},
+  hole:{kind:'hole',hw:0.95,hz:0.95,hh:0.7,geos:[holeGeo(1),holeGeo(2),holeGeo(3)]},
+  fennec:{kind:'ped',hw:0.35,hz:0.5,hh:0.9,sc:1.8,geos:[fennecGeo(0)],walkG:[fennecGeo(0.6),fennecGeo(-0.6)]},
+  lizard:{kind:'ped',hw:0.4,hz:0.6,hh:0.6,sc:2.4,geos:[lizardGeo(0)],walkG:[lizardGeo(0.8),lizardGeo(-0.8)]},
+  spike:{kind:'spike',hw:1.45,hz:0.3,hh:0.6,geos:[spikeGeo()]},
   ped:{kind:'ped',hw:0.45,hz:0.55,hh:2.2,sc:1.2,matsFn:pedMats,geos:PEDC.map((c,n)=>pedGeo(c,false,0,n))}
 };
 

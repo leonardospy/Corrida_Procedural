@@ -8,6 +8,7 @@ import {GJ,coinList,obstacles,wrenchList} from './state.js';
 import {crossWait,gen,genCross,genRow,genWork,laneFree,leaderLimit,releaseObstacle,sideBlocked,sigSet,updAnimal} from './generator.js';
 import {OB} from './obstacles.js';
 import {busyAt,underOf} from './tunnels.js';
+import {updateBoss} from './boss.js';
 import {emitDust,emitSmoke} from './effects.js';
 import {blip,noise} from './audio.js';
 import {toast,updateHp} from './hud.js';
@@ -138,6 +139,7 @@ export function updatePlay(dt,now){
     if(st>ST.lastStage){ST.lastStage=st;toast(PAL[st%PAL.length].name,'Novo cenário · Nível '+lv);}
     else toast('Nível '+lv,fmt(ST.dist)+' m');
   }
+  updateBoss(dt,now);
   emitSmoke(dt);
   ST.shake*=Math.exp(-dt*4);
 }

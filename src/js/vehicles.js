@@ -1,6 +1,6 @@
 /* Carros (versão 2): carroceria low poly por seções transversais facetadas + detalhes "adesivados" na superfície.
    A versão anterior está guardada em "Carros 01.js". Frente do carro em -z. */
-import {M} from './scene.js';
+import {M,patch} from './scene.js';
 import {H,PB,PCy,UB,geo,haloArr,tm} from './geometry.js';
 import * as RY7 from './models/ry7.js';
 
@@ -96,6 +96,8 @@ function build(s){
   const PR=Z.map(function(z){const p=archAt(s,z,paramsAt(s,z));return {z:z,p:p,pts:prof(p,W),cab:cabOf(p)};});
   const pil=zm=>(s.pillars||[]).some(r=>zm>=r[0]*L&&zm<=r[1]*L);
   const tri=(arr,a,b,c,col)=>{arr.push({v:[a,b,c],c:col});};
+  /* trecho de vidro inclinado (para-brisa ou vigia): a cabine começa/termina ou o teto sobe/desce rápido entre as estações */
+  const steep=(A,B)=>A.cab!==B.cab||(A.cab&&Math.abs(A.p.roof-B.p.roof)>0.5*Math.abs(B.z-A.z));
   /* casca: quads entre estações vizinhas, espelhados nos dois lados */
   for(let i=0;i<PR.length-1;i++){
     const A=PR[i],B=PR[i+1],zm=(A.z+B.z)/2;
@@ -104,11 +106,11 @@ function build(s){
       if(g===0)col=UNDER;
       else if(g===1)col=TRIM;
       else if(g===5){
-        if(A.cab&&B.cab)col=pil(zm)?(s.pillarC!==undefined?s.pillarC:ROOF):GLASS;
-        else if(A.cab!==B.cab)col=s.pillarC!==undefined?s.pillarC:ROOF;
+        if(steep(A,B))col=GLASS_HI;
+        else if(A.cab&&B.cab)col=pil(zm)?(s.pillarC!==undefined?s.pillarC:ROOF):GLASS;   /* para-brisa / vigia: vidro inteiro, a coluna vem depois como filete */
         else col=C;
       }else if(g===6){
-        if(A.cab!==B.cab)col=GLASS_HI;
+        if(steep(A,B))col=GLASS_HI;
         else col=A.cab?ROOF:C;
       }else col=C;
       if(s.paint){const o=s.paint(zm/L,g,A.cab&&B.cab);if(o!==null&&o!==undefined)col=o;}
@@ -170,6 +172,18 @@ function build(s){
     parts:[], lights:[]
   };
   if(s.detail)s.detail(k);
+  /* colunas A e C: filete fino na diagonal entre a base do vidro e o canto do teto */
+  const PIL=s.pillarC!==undefined?s.pillarC:ROOF;
+  for(let i=0;i<PR.length-1;i++){
+    if(!steep(PR[i],PR[i+1])||(i>0&&steep(PR[i-1],PR[i])))continue;
+    let j=i;while(j+1<PR.length-1&&steep(PR[j+1],PR[j+2]))j++;   /* trecho inclinado inteiro: estações i até j+1 */
+    const E0=PR[i],E1=PR[j+1],lo=E0.p.roof<E1.p.roof?E0:E1,hi=lo===E0?E1:E0,dz=(hi.z>lo.z?1:-1)*0.07;
+    [-1,1].forEach(function(sd){
+      const a=[sd*(lo.pts[5][0]+0.012),lo.pts[5][1],lo.z],b=[sd*(hi.pts[6][0]+0.012),hi.pts[6][1]+0.004,hi.z];
+      const c=[b[0],b[1],b[2]+dz],d=[a[0],a[1],a[2]+dz];
+      tri(body,a,b,c,PIL);tri(body,a,c,b,PIL);tri(body,a,c,d,PIL);tri(body,a,d,c,PIL);
+    });
+  }
   /* caixas de roda: teto em arco e parede interna escuros, para o recorte não deixar ver através do carro */
   const WELL=0x0e0e12, wx=s.W*0.93-s.ww;
   s.wz.forEach(function(zc){
@@ -417,6 +431,36 @@ export const CARS=[
   {id:'veloce',name:'Quattro V10',price:5000,accel:21,vmax:74},
   {id:'hiper',name:'Touro X',price:9000,accel:24,vmax:84}
 ];
+/* ---------- Chefe: Corvette da polícia (preto com portas brancas, barra de luzes no teto) ---------- */
+const POLICE={L:4.6,W:0.97,r:0.34,ww:0.28,wz:[-1.4,1.4],c:0x15161c,pillarC:0x0c0c10,rimStyle:'y5',
+  st:[[-0.5,.78,.18,.4,.5,.5,.5,0],[-0.45,.92,.15,.56,.64,.64,.55,0],[-0.33,.98,.14,.78,.84,.84,.58,-0.06],[-0.18,1,.14,.78,.84,.84,.6,-0.03],
+    [-0.04,1,.14,.76,.85,.85,.6,0.02],[0.08,1,.14,.76,.86,1.22,.62,.05],[0.24,1,.14,.78,.88,1.2,.6,.05],[0.34,1,.14,.8,.92,.95,.58,.02],
+    [0.46,.98,.18,.78,.92,.92,.6,.01],[0.5,.92,.24,.66,.88,.88,.55,0]],
+  paint:function(zn,g){return g>=2&&g<=4&&zn>-0.1&&zn<0.26?0xf4f4f0:null;},   /* portas brancas */
+  detail:function(k){
+    const f=k.front,r=k.rear;
+    k.cap(-1,trap(0,capY(f,0.4),0.9,0.7,0.16),BLACK);
+    [-1,1].forEach(function(sd){
+      k.cap(-1,rect(sd*0.55,capY(f,0.74),0.36,0.05,sd*0.12),LED,{L:true});
+      k.cap(1,rect(sd*0.55,capY(r,0.7),0.4,0.09),TAIL,{L:true,halo:0.45});
+    });
+    plate(k,1,capY(r,0.4));exhaust(k,0.12,0.26,0.05);exhaust(k,0.3,0.26,0.05);
+    /* para-choque de impulsão */
+    k.parts.push({g:UB,m:tm(0,0.42,k.zf-0.18,1.3,0.08,0.08),c:BLACK},{g:UB,m:tm(0,0.28,k.zf-0.18,1.3,0.08,0.08),c:BLACK});
+    [-1,1].forEach(function(sd){k.parts.push({g:UB,m:tm(sd*0.45,0.35,k.zf-0.12,0.08,0.28,0.2),c:BLACK});});
+    k.side(-0.06,0.22,3.3,3.7,0x1f4fb4,{nz:3});   /* faixa azul nas portas */
+    mirrors(k,-0.02,BLACK);wing(k,0.47,0.06,1.3,0.22,BLACK,0.6);
+  }};
+/* devolve o grupo do carro e as duas metades da barra de luzes (vermelha e azul) para piscarem */
+export function makePolice(){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(vehGeo(POLICE,true),[M.vcol,M.lights,M.halo]));
+  const z=0.16*POLICE.L,y=1.27;
+  g.add(new THREE.Mesh(geo([PB(1.1,0.08,0.28,0,y,z,0x22232a)]),M.vcol));
+  const red=new THREE.Mesh(geo([PB(0.5,0.12,0.24,-0.28,y+0.09,z,0xff2020)]),patch(new THREE.MeshBasicMaterial({vertexColors:true}))), blue=new THREE.Mesh(geo([PB(0.5,0.12,0.24,0.28,y+0.09,z,0x2050ff)]),patch(new THREE.MeshBasicMaterial({vertexColors:true})));
+  g.add(red,blue);
+  return {g:g,red:red,blue:blue,hz:POLICE.L/2,hw:POLICE.W};
+}
 /* RY 7: modelo importado (Mazda RX7 Stylised, de SheldonJ99, CC-BY 4.0) */
 CARSPEC.ry7={model:'ry7',c:0xf4f4f4};
 CARS.forEach(function(c){c.c=CARSPEC[c.id].c;});

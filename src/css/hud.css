@@ -52,3 +52,15 @@
 .spd small{font-size:14px;font-style:normal;font-weight:500;letter-spacing:.14em;color:var(--sun)}
 .bar{width:min(120px,28vw);height:6px;border-radius:3px;background:rgba(255,244,226,.2);overflow:hidden}
 .bar i{display:block;height:100%;width:100%;transform-origin:left center;transform:scaleX(0);background:linear-gradient(90deg,var(--sun),var(--hot))}
+/* chefe: nome, barra de progresso da perseguição e aviso da faixa por onde a polícia vai passar */
+.boss{position:absolute;left:0;right:0;top:12px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+.boss b{font-size:13px;letter-spacing:.24em;text-transform:uppercase;padding:4px 14px;border-radius:999px;background:linear-gradient(90deg,#d8263a,#2050ff);color:#fff}
+.bbar{width:min(260px,52vw);height:6px;border-radius:3px;background:rgba(255,244,226,.2);overflow:hidden}
+.bbar i{display:block;height:100%;width:100%;transform-origin:left center;background:linear-gradient(90deg,#2050ff,#d8263a)}
+.blanes{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:4px}
+.blanes span{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.blanes div{display:flex;gap:6px}
+.blanes i{width:46px;height:30px;border-radius:6px;border:2px solid rgba(255,244,226,.4);background:rgba(18,13,31,.5)}
+.blanes i.on{border-color:#fff;animation:sirenblink .35s steps(2) infinite}
+@keyframes sirenblink{0%{background:#d8263a}100%{background:#2050ff}}
+@media (prefers-reduced-motion:reduce){.blanes i.on{animation:none;background:#d8263a}}

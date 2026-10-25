@@ -1,11 +1,11 @@
 /* Áudio sintetizado (WebAudio) */
 import {ST} from './shared.js';
 import {L,cfg} from './config.js';
-import {cityK} from './track.js';
+import {cityK,desertAt} from './track.js';
 import {coverAt} from './tunnels.js';
 
 export let AC=null,master=null,engOsc=null,engGain=null,engF=null;ST.muted=false;
-let echoWet=null,amb=null;
+let echoWet=null,amb=null,siren=null;
 try{ST.muted=localStorage.getItem('corrida-procedural-mute')==='1';}catch(e){}
 export function audioInit(){
   if(AC){if(AC.state==='suspended')AC.resume();return;}
@@ -48,6 +48,10 @@ function ambInit(){
   const lfo=AC.createOscillator(),depth=AC.createGain();   /* rajadas de vento */
   lfo.frequency.value=0.11;depth.gain.value=0.14;lfo.connect(depth);depth.connect(wind.gain);lfo.start();
   amb={bus:bus,city:city,forest:forest,nextBird:0,nextHorn:0};
+  /* sirene da polícia: onda triangular subindo e descendo (uivo), volume controlado por sirenLevel */
+  const so=AC.createOscillator(),sg=AC.createGain(),lf=AC.createOscillator(),ld=AC.createGain();
+  so.type='triangle';so.frequency.value=900;lf.frequency.value=0.55;ld.gain.value=320;lf.connect(ld);ld.connect(so.frequency);
+  sg.gain.value=0;so.connect(sg);sg.connect(master);so.start();lf.start();siren=sg;
 }
 function panned(vol){
   const g=AC.createGain();g.gain.value=vol;
@@ -88,7 +92,8 @@ export function audioTick(){
   amb.city.gain.setTargetAtTime(0.28*kc*open,t,0.6);
   amb.forest.gain.setTargetAtTime(0.3*(1-kc)*open,t,0.6);
   if(!on||ST.muted)return;
-  if(t>=amb.nextBird){if((1-kc)*open>0.2)chirp(t+0.02,0.035*(1-kc)*open);amb.nextBird=t+0.35+Math.random()*2.2;}
+  const kd=desertAt(ST.dist);   /* no deserto só o vento: sem passarinhos */
+  if(t>=amb.nextBird){if((1-kc)*(1-kd)*open>0.2)chirp(t+0.02,0.035*(1-kc)*(1-kd)*open);amb.nextBird=t+0.35+Math.random()*2.2;}
   if(t>=amb.nextHorn){if(kc*open>0.3)horn(t+0.02,0.03*kc*open);amb.nextHorn=t+3+Math.random()*7;}
 }
 export function blip(f1,f2,dur,type,vol){
@@ -106,3 +111,6 @@ export function noise(dur,vol,fc){
   s.buffer=buf;f.type='lowpass';f.frequency.value=fc;g.gain.value=vol;
   s.connect(f);f.connect(g);g.connect(master);s.start();
 }
+
+/* volume da sirene (0 a 1), ajustado a cada quadro pelo chefe */
+export function sirenLevel(v){if(AC&&siren)siren.gain.setTargetAtTime(ST.muted?0:0.05*v,AC.currentTime,0.1);}

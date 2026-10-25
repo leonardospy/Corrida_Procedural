@@ -2,7 +2,7 @@
 import {ST} from './shared.js';
 import {L,LANE_W,MAXC,N,NDEB,NDUST,NSM,ROAD_HALF,cfg,clamp,hash,lerp,smooth} from './config.js';
 import {M,scene} from './scene.js';
-import {PB,PCo,PCy,geo,tm} from './geometry.js';
+import {FR,PB,PCo,PCy,geo,tm} from './geometry.js';
 import {PEDC,cartGeo,deerGeo,foxGeo,pedGeo,rabbitGeo,shopGeo,stallGeo,wrenchGeo} from './obstacles.js';
 import {tunnelOf,underOf} from './tunnels.js';
 
@@ -66,6 +66,16 @@ inst('log',geo([{g:new THREE.CylinderGeometry(0.32,0.34,3.2,7),m:tm(0,0.3,0,1,1,
   {g:Ico(0.25),m:tm(0.6,0.62,0.1,1.2,0.5,1.2),c:0x5f9a48}]),M.vcol,N*2);
 inst('rock',geo([{g:new THREE.IcosahedronGeometry(1,0),m:tm(0,0.6,0,1.3,0.9,1.1)}]),M.rock,N*2);
 inst('mount',geo([{g:new THREE.ConeGeometry(1,1,5),m:tm(0,0.5,0)}]),M.mount,N);
+/* deserto: chão de areia, cactos, arbustos secos, dunas e chapadões ao fundo */
+inst('sground',BX(120,0.5,L+0.05),M.sand,N*2);
+const CAC=0x4f8a4a,CAC2=0x3f7a3e;
+inst('cactus',geo([PCy(0.32,0.36,4.2,8,0,2.1,0,CAC),{g:Ico(0.33,1),m:tm(0,4.2,0,1,0.6,1),c:CAC},
+  PCy(0.2,0.22,1.0,7,0.75,1.9,0,CAC2,0,0,Math.PI/2),PCy(0.2,0.2,1.3,7,1.15,2.55,0,CAC2),{g:Ico(0.2,1),m:tm(1.15,3.2,0,1,0.6,1),c:CAC2},
+  PCy(0.18,0.2,0.8,7,-0.6,2.5,0,CAC2,0,0,Math.PI/2),PCy(0.18,0.18,1.0,7,-0.95,3.0,0,CAC2),{g:Ico(0.18,1),m:tm(-0.95,3.5,0,1,0.6,1),c:CAC2},
+  {g:Ico(0.12,0),m:tm(0.05,4.45,0.1),c:0xf26d8a}]),M.vcol,N*8);
+inst('dshrub',geo([{g:Ico(0.6,0),m:tm(0,0.35,0,1.3,0.6,1.1),c:0x8f8a52},{g:Ico(0.45,0),m:tm(0.5,0.28,0.2,1,0.6,1),c:0x7d7a48},{g:Ico(0.4,0),m:tm(-0.45,0.25,-0.2,1,0.6,1),c:0xa09858}]),M.vcol,N*8);
+inst('mesa',geo([FR(1,0.78,1,0.8,0.55,0,0,0,0xb8653c),FR(0.8,0.7,0.82,0.72,0.3,0,0.55,0,0xc87a48),FR(0.72,0.66,0.74,0.68,0.15,0,0.85,0,0xa85a36)]),M.vcol,N);
+inst('sdune',geo([{g:new THREE.SphereGeometry(1,10,5,0,Math.PI*2,0,Math.PI/2),m:tm(0,0,0,1,1,1),c:0xd9b67a}]),M.vcol,N*2);
 /* prédios: faixas de janelas acendem à noite */
 /* corpo branco (a cor vem da instância) e janelas numa malha à parte, para o tingimento não apagar a luz delas */
 const lum=()=>{const v=Math.random()<0.25?0.3+Math.random()*0.2:0.65+Math.random()*0.35;return new THREE.Color(v,v,v).getHex();};
@@ -172,6 +182,8 @@ const PINE_T=[0xffffff,0xdcefd4,0xeef8d0,0xc8dcc8,0xe8f0e0,0xd0e8e0];
 const OAK_T=[0xb8e09a,0x9ccc80,0xd0e8a0,0x88c070,0xc8d890,0xa8d48a,0xf0b060,0xe08a50];
 const BUSH_T=[0xffffff,0xd8f0c8,0xf0f8d8,0xc0dcb0,0xe0f0c0];
 function hideNature(TB,BB,q){
+  for(let k=0;k<4;k++){hideI(I.cactus,q*4+k);hideI(I.dshrub,q*4+k);}
+  hideI(I.sdune,q);
   for(let k=0;k<12;k++){hideI(I.fol,TB+k);hideI(I.oak,TB+k);hideI(I.trunk,TB+k);hideI(I.birch,TB+k);}
   for(let k=0;k<6;k++)hideI(I.bush,BB+k);
   for(let k=0;k<4;k++)hideI(I.fern,q*4+k);
@@ -284,7 +296,23 @@ ST.lastTile=0;ST.dirty=false;
 /* 0 = floresta, 1 = cidade; muda de forma gradual a cada ~500 m. Os dois lados seguem o mesmo trecho. */
 /* trechos longos: floresta ~4 a 5 km, cidade ~2 a 3 km, com transição suave de ~340 m */
 const SB=[0], CT=170;
-const segLen=k=>k%2===0?2300+hash(k,7)*800:4200+hash(k,3)*1100;
+/* depois de uma cidade, às vezes vem um deserto (~8 km) em vez da mata */
+export const isDesertSeg=k=>k%2===1&&hash(k,901)<0.4;
+const segLen=k=>k%2===0?2300+hash(k,7)*800:(isDesertSeg(k)?7600+hash(k,3)*800:4200+hash(k,3)*1100);
+/* 0 = fora do deserto, 1 = dentro; transição suave nas bordas como a da cidade */
+function desertM(m){
+  if(m<0)return 0;
+  let k=0;while(segStart(k+1)<=m)k++;
+  let v=0;
+  for(let c=Math.max(0,k-1);c<=k+1;c++){
+    if(!isDesertSeg(c))continue;
+    const a=segStart(c),b=segStart(c+1);
+    v=Math.max(v,Math.min(smooth(a-CT,a+CT,m),1-smooth(b-CT,b+CT,m)));
+  }
+  return v;
+}
+export const desertK=i=>desertM(i*L);
+export const desertAt=d=>desertM(d);
 export function segStart(k){while(SB.length<=k)SB.push(SB[SB.length-1]+segLen(SB.length-1));return SB[k];}
 function cityM(m){
   if(m<0)return 1;
@@ -309,7 +337,7 @@ export const isX=i=>i>=24&&cityK(i)>0.85&&(((i%20)+20)%20)===5;
 export const hasLamp=i=>((i%3)+3)%3===0&&!isX(i)&&!tunnelOf(i)&&!underOf(i);
 export function placeTile(i){
   const s=((i%N)+N)%N, z=-i*L, zone=Math.floor(i/14);
-  const ck=cityK(i), fw=1-ck, xr=isX(i), tun=tunnelOf(i), up=underOf(i);
+  const ck=cityK(i), dk=desertK(i), fw=(1-ck)*(1-dk), xr=isX(i), tun=tunnelOf(i), up=underOf(i), sand=dk>0.5&&ck<0.55;
   setI(I.asphalt,s,0,-0.2,z);
   /* túnel da mata: montanha, revestimento, bocas e luminárias */
   if(tun){
@@ -346,8 +374,17 @@ export function placeTile(i){
   const xShift=isX(i+1)?3.5:(isX(i-1)?-3.5:0);
   for(let j=0;j<2;j++){
     const sd=j?1:-1, q=s*2+j, TB=s*24+j*12, BB=s*12+j*6, city=ck>0.55;
-    if(city){hideI(I.ground,q);setI(I.cground,q,sd*66.1,-0.33,z);}
-    else{setI(I.ground,q,sd*66.1,-0.33,z);hideI(I.cground,q);}
+    if(city){hideI(I.ground,q);hideI(I.sground,q);setI(I.cground,q,sd*66.1,-0.33,z);}
+    else if(sand){hideI(I.ground,q);hideI(I.cground,q);setI(I.sground,q,sd*66.1,-0.33,z);}
+    else{setI(I.ground,q,sd*66.1,-0.33,z);hideI(I.cground,q);hideI(I.sground,q);}
+    /* deserto: cactos e arbustos secos, rareando nas bordas da zona */
+    for(let k=0;k<4;k++){
+      const o=700+j*40+k*6, f=q*4+k, on=!xr&&!tun&&hash(i,o)<0.55*dk*(1-ck);
+      if(on&&hash(i,o+1)<0.45){const sc=0.7+hash(i,o+4)*0.6;setI(I.cactus,f,sd*(9+hash(i,o+2)*26),0,z+(hash(i,o+3)-0.5)*L,sc,sc*(0.85+hash(i,o+5)*0.4),sc,hash(i,o+6)*6.28);hideI(I.dshrub,f);}
+      else if(on){const sc=0.6+hash(i,o+4)*0.8;setI(I.dshrub,f,sd*(7.4+hash(i,o+2)*24),0,z+(hash(i,o+3)-0.5)*L,sc,sc,sc,hash(i,o+6)*6.28);hideI(I.cactus,f);}
+      else{hideI(I.cactus,f);hideI(I.dshrub,f);}
+    }
+    if(sand&&hash(i,j+720)<0.35){const w=8+hash(i,j+721)*14;setI(I.sdune,q,sd*(28+hash(i,j+722)*40),-0.2,z+(hash(i,j+723)-0.5)*L,w,1.5+hash(i,j+724)*3,w*0.7,hash(i,j+725)*6.28);}else hideI(I.sdune,q);
     if(xr||tun){
       /* no cruzamento e dentro da montanha não há mureta, árvores, pedras, bichos nem prédios */
       if(xrTop){hideI(I.curbR,q);hideI(I.curbW,q);}else{setI(I.curbR,q,sd*5.8,0.11,z-3);setI(I.curbW,q,sd*5.8,0.11,z+3);}
@@ -360,7 +397,7 @@ export function placeTile(i){
     if(city){hideI(I.rail,q);hideI(I.post,s*4+j*2);hideI(I.post,s*4+j*2+1);}
     else{setI(I.rail,q,sd*6.6,0,z);setI(I.post,s*4+j*2,sd*6.6,0,z-3);setI(I.post,s*4+j*2+1,sd*6.6,0,z+3);}
     /* mata densa: 12 árvores por trecho e lado, rareando na cidade */
-    const treeK=1-smooth(0.3,0.58,ck), pT=clamp((0.14+0.86*Math.pow(fw,0.7))*cfg.forest*treeK,0,1), spread=lerp(40,6,ck);
+    const treeK=1-smooth(0.3,0.58,ck), pT=clamp((0.14+0.86*Math.pow(fw,0.7))*cfg.forest*treeK*(1-dk),0,1), spread=lerp(40,6,ck);
     for(let k=0;k<12;k++){
       const t=TB+k, o=200+j*100+k*7;
       if(hash(i,o+1)<pT){
@@ -373,7 +410,7 @@ export function placeTile(i){
       }else{hideI(I.fol,t);hideI(I.oak,t);hideI(I.trunk,t);hideI(I.birch,t);}
     }
     /* sub-bosque: arbustos */
-    const pB=clamp((0.12+0.78*fw)*cfg.forest*treeK,0,1);
+    const pB=clamp((0.12+0.78*fw)*cfg.forest*treeK*(1-dk),0,1);
     for(let k=0;k<6;k++){
       const o=500+j*60+k*5;
       if(hash(i,o+1)<pB){
@@ -434,10 +471,15 @@ export function placeTile(i){
   }else{hideI(I.lamp,s);hideI(I.lhead,s);hideI(I.pool,s);}
   /* montanhas ao fundo (mais frequentes perto dos túneis) */
   const nearTun=tunnelOf(i-6)||tunnelOf(i+6)||tun;
-  if(hash(i,90)<(nearTun?0.9:0.4)){
+  /* no deserto, chapadões avermelhados no lugar das montanhas */
+  if(desertK(i)>0.5&&hash(i,96)<0.3){
+    const sd=hash(i,97)<0.5?-1:1, w=30+hash(i,98)*40;
+    setI(I.mesa,s,sd*(80+hash(i,99)*50),-0.1,z,w,14+hash(i,100)*22,w*0.7,hash(i,101)*6.28);hideI(I.mount,s);
+  }else if(hash(i,90)<(nearTun?0.9:0.4)&&desertK(i)<0.5){
+    hideI(I.mesa,s);
     const sd=hash(i,91)<0.5?-1:1, w=16+hash(i,93)*22, hg=14+hash(i,94)*24;
     setI(I.mount,s,sd*(60+hash(i,92)*55),-0.1,z,w,hg,w,hash(i,95)*6.28);
-  }else hideI(I.mount,s);
+  }else{hideI(I.mount,s);hideI(I.mesa,s);}
   ST.dirty=true;
 }
 export function flushInstances(){

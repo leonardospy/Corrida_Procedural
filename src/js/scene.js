@@ -75,6 +75,7 @@ Object.assign(M,{
   sig:patch(new THREE.MeshBasicMaterial({color:0xffa81a})),
   sidew:mk({color:0xa9a39a},true),
   cground:mk({color:0x8f8c86},true),
+  sand:mk({color:0xdcbc84},true),
   vest:patch(new THREE.MeshBasicMaterial({vertexColors:true})),
   pool2:patch(new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})),
   beam2:new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false})

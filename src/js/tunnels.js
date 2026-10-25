@@ -1,6 +1,6 @@
 /* Túneis na mata (montanha sobre a pista) e passagens subterrâneas na cidade */
 import {L,hash,smooth} from './config.js';
-import {cityK,isX,segStart} from './track.js';
+import {cityK,isDesertSeg,isX,segStart} from './track.js';
 
 /* túneis da mata: cada região de mata (trecho ímpar entre duas cidades) tem 0, 1 ou 2 túneis longos (300 a 700 m) */
 const tunC=new Map();
@@ -8,7 +8,7 @@ function segOf(d){let k=0;while(segStart(k+1)<=d)k++;return k;}
 function tunSeg(k){
   if(tunC.has(k))return tunC.get(k);
   const list=[];
-  if(k%2===1){
+  if(k%2===1&&!isDesertSeg(k)){   /* no deserto não há túneis */
     const a=segStart(k)+420,b=segStart(k+1)-420, r=hash(k,700), n=r<0.2?0:(r<0.6?1:2);
     for(let t=0;t<n;t++){
       const lo=a+(b-a)*t/n, hi=a+(b-a)*(t+1)/n, len=(25+Math.floor(hash(k,701+t)*34))*L;
