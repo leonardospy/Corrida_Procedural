@@ -7,7 +7,7 @@ export const MATS={
   "Material_6":{color:0x1e1f1e,role:"trim"},
   "Material_8":{color:0x37373c,role:"trim"},
   "Material_7":{color:0x0f0f0d,role:"trim"},
-  "Material_9":{color:0xcbcbcb,role:"trim"},
+  "Material_9":{color:0xcbcbcb,role:"body"},
   "02_-_Default":{color:0xffffff,role:"body"},
   "Material_17":{color:0x1d1d1d,role:"trim"},
   "Material_1_lanterna":{color:0xbe3b3b,role:"tail"},

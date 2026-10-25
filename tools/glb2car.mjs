@@ -13,7 +13,7 @@ const CFG = {
   head: 'Material_14',               // material dos faróis: diz onde é a frente
   /* papel de cada material no jogo (o resto vira 'trim'):
      body = lataria (pode ser repintada), glass, head = farol, tail = lanterna, signal = pisca (os três últimos acendem) */
-  roles: { '02_-_Default': 'body', Material_14: 'head', Material_2: 'signal', Material_3: 'glass', Material_4: 'glass', Material_5: 'glass' },
+  roles: { '02_-_Default': 'body', Material_9: 'body', Material_14: 'head', Material_2: 'signal', Material_3: 'glass', Material_4: 'glass', Material_5: 'glass' },
   /* o mesmo material pode ter papéis diferentes conforme a posição: o vermelho atrás são as lanternas, nas rodas são as pinças */
   split: [{ mat: 'Material_1', as: 'Material_1_lanterna', role: 'tail', when: (c) => c[2] > 1.6 }]
 };
