@@ -84,7 +84,7 @@ export function audioTick(){
   if(!AC)return;
   const on=(ST.state==='play'||ST.state==='crash'),t=AC.currentTime;
   musicTick(on);
-  engGain.gain.setTargetAtTime(on?0.024:0,t,0.08);   /* motor mais baixo */
+  engGain.gain.setTargetAtTime(on&&ST.fuel>0?0.024:0,t,0.08);   /* motor mais baixo */
   engOsc.frequency.setTargetAtTime(52+ST.speed*2.3,t,0.08);
   engF.frequency.setTargetAtTime(300+ST.speed*14,t,0.1);
   /* ambiente: mistura cidade/mata pelo trecho atual; abafado dentro de túneis, onde o motor ecoa */

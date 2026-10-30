@@ -8,7 +8,7 @@ import {resetProps,skipProps} from './scenery.js';
 import {I,hideI,sw} from './track.js';
 import {persist,save} from './save.js';
 import {showCarModel} from './player.js';
-import {coinList,obstacles,wrenchList} from './state.js';
+import {coinList,fuelList,obstacles,wrenchList} from './state.js';
 import {gen,releaseObstacle,resetGen} from './generator.js';
 import {debris,dust,smokeP,spawnDebris} from './effects.js';
 import {audioInit,blip,noise} from './audio.js';
@@ -28,25 +28,26 @@ function cut(fn){
 }
 function releaseAll(){
   sw.forEach(function(w){w.on=false;});
-  obstacles.forEach(releaseObstacle);obstacles.length=0;coinList.length=0;wrenchList.length=0;
+  obstacles.forEach(releaseObstacle);obstacles.length=0;coinList.length=0;wrenchList.length=0;fuelList.length=0;
   gantries.forEach(g=>{g.on=false;g.grp.visible=false;});resetProps();
   debris.forEach(d=>{d.life=0;});smokeP.forEach(s=>{s.life=0;});dust.forEach(d=>{d.life=0;});
 }
 export function resetRun(){
   ST.dist=0;ST.speed=0;ST.lane=1;ST.px=0;ST.coins=0;ST.topSpeed=0;ST.crashT=0;ST.shake=0;
   ST.carY=0;ST.carVy=0;ST.carVx=0;ST.carSpin=0;ST.carRz=0;ST.carRx=0;ST.airborne=false;ST.hop=false;ST.carPitch=0;ST.rampY=0;
+  ST.fuel=100;ST.fuelWarn=false;ST.fuelOut=false;
   ST.hits=0;ST.inv=0;ST.confuse=0;ST.smokeAcc=0;ST.deathCause='hit';
   ST.lastLevel=1;ST.lastStage=0;ST.gantryNext=LEVEL_M;
   releaseAll();resetGen();resetBoss();
   for(const k in I){for(let i=0;i<I[k].count;i++)hideI(I[k],i);}
   ST.lastTile=-BEHIND_T-1;ST.dirty=true;
-  ST.hSc=ST.hDist=ST.hCoins=ST.hKmh=ST.hLvl=ST.hStage=-1;
+  ST.hSc=ST.hDist=ST.hCoins=ST.hKmh=ST.hLvl=ST.hStage=ST.hFuel=-1;
   updateHp();
 }
 /* leva a corrida direto para a distância d, com o gerador, a pista e as placas acertados para lá */
 function jumpTo(d){
   ST.dist=d;ST.speed=Math.min(speedAt(d),ST.cur.vmax)*0.8;
-  gen.z=d+40;gen.xi=Math.ceil(d/L);gen.wzNext=d+2000;gen.rampZ=d+300;gen.wrZ=d+300;gen.pedZ=d+200;gen.anZ=d+200;gen.end=d;gen.lastD=[d,d,d];
+  gen.z=d+40;gen.xi=Math.ceil(d/L);gen.wzNext=d+2000;gen.rampZ=d+300;gen.wrZ=d+300;gen.fuelZ=d+150;gen.pedZ=d+200;gen.anZ=d+200;gen.end=d;gen.lastD=[d,d,d];
   ST.lastTile=Math.floor(d/L)-BEHIND_T-1;
   ST.lastLevel=Math.floor(d/LEVEL_M)+1;ST.lastStage=Math.floor(d/ST.STAGE_M);ST.gantryNext=Math.ceil(d/LEVEL_M)*LEVEL_M;
   skipProps(d);
@@ -116,7 +117,7 @@ function crash(cause){
 export function gameOver(){
   ST.state='over';
   const r=finishRun();
-  $('oTitle').textContent=ST.deathCause==='wreck'?'Carro destruído':'Batida';
+  $('oTitle').textContent=ST.deathCause==='wreck'?'Carro destruído':(ST.deathCause==='fuel'?'Sem combustível':'Batida');
   $('oScore').textContent=fmt(r.sc);
   $('oDist').textContent=fmt(ST.dist);
   $('oSpeed').textContent=Math.round(ST.topSpeed*3.6);

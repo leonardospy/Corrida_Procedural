@@ -3,7 +3,7 @@ import {ST} from './shared.js';
 import {L,LANE_W,MAXC,N,NDEB,NDUST,NSM,ROAD_HALF,cfg,clamp,hash,lerp,smooth} from './config.js';
 import {M,scene} from './scene.js';
 import {FR,PB,PCo,PCy,geo,tm} from './geometry.js';
-import {PEDC,cartGeo,deerGeo,foxGeo,pedGeo,rabbitGeo,shopGeo,stallGeo,wrenchGeo} from './obstacles.js';
+import {PEDC,cartGeo,deerGeo,foxGeo,fuelGeo,pedGeo,rabbitGeo,shopGeo,stallGeo,wrenchGeo} from './obstacles.js';
 import {tunnelOf,underOf} from './tunnels.js';
 
 /* ------------------------------------------------------------------ */
@@ -286,6 +286,7 @@ inst('afox',foxGeo(),M.vcol,N*2);
 inst('arabbit',rabbitGeo(),M.vcol,N*2);
 /* efeitos */
 inst('wrench',wrenchGeo,M.wrench,8);
+inst('fuel',fuelGeo,M.fuel,8);
 inst('coin',geo([{g:new THREE.CylinderGeometry(0.5,0.5,0.14,10),m:tm(0,0,0,1,1,1,Math.PI/2,0,0)}]),M.coin,MAXC);
 inst('deb',BX(0.32,0.32,0.32),M.deb,NDEB);
 inst('smoke',geo([{g:new THREE.IcosahedronGeometry(0.4,0)}]),M.smoke,NSM);

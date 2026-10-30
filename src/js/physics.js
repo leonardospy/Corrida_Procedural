@@ -4,19 +4,31 @@ import {AHEAD,L,LANES,LEVEL_M,clamp,fmt,lerp,speedAt} from './config.js';
 import {PAL} from './scene.js';
 import {drawSign,gantries} from './obstacles.js';
 import {updateProps} from './scenery.js';
-import {GJ,coinList,obstacles,wrenchList} from './state.js';
+import {GJ,coinList,fuelList,obstacles,wrenchList} from './state.js';
 import {crossWait,gen,genCross,genRow,genWork,laneFree,leaderLimit,releaseObstacle,sideBlocked,sigSet,updAnimal} from './generator.js';
 import {OB} from './obstacles.js';
 import {busyAt,underOf} from './tunnels.js';
-import {updateBoss} from './boss.js';
+import {bossActive,updateBoss} from './boss.js';
 import {emitDust,emitSmoke} from './effects.js';
 import {blip,noise} from './audio.js';
 import {toast,updateHp} from './hud.js';
 import {gameOver,hitObstacle} from './race.js';
 
+/* combustível: 100% dura uns 2 km; na batalha contra o chefe não gasta */
+const FUEL_PER_M=100/2000, FUEL_TANK=30;
 export function updatePlay(dt,now){
   const target=Math.min(speedAt(ST.dist),ST.cur.vmax);
-  ST.speed=Math.min(target,ST.speed+ST.cur.accel*dt);
+  if(ST.fuel>0)ST.speed=Math.min(target,ST.speed+ST.cur.accel*dt);
+  else{
+    /* sem combustível: o carro perde embalo até parar */
+    ST.speed*=Math.exp(-dt*0.9);
+    if(!ST.fuelOut){ST.fuelOut=true;toast('Sem combustível!','Pegue um tanque');}
+    if(ST.speed<3){ST.deathCause='fuel';gameOver();return;}
+  }
+  if(!bossActive()){
+    ST.fuel=Math.max(0,ST.fuel-ST.speed*dt*FUEL_PER_M);
+    if(ST.fuel<20&&!ST.fuelWarn){ST.fuelWarn=true;toast('Combustível baixo','Procure um tanque');}
+  }
   const prevD=ST.dist;
   ST.dist+=ST.speed*dt;ST.topSpeed=Math.max(ST.topSpeed,ST.speed);
   ST.px+=(LANES[ST.lane]-ST.px)*(1-Math.exp(-dt*17));
@@ -120,6 +132,14 @@ export function updatePlay(dt,now){
     if(c.d<ST.dist-20){coinList.splice(i,1);continue;}
     if(Math.abs(c.d-ST.dist)<1.8&&Math.abs(ST.px-LANES[c.lane])<1.4){
       coinList.splice(i,1);ST.coins++;blip(880,1320,0.12,'square',0.07);
+    }
+  }
+  for(let i=fuelList.length-1;i>=0;i--){
+    const f=fuelList[i];
+    if(f.d<ST.dist-20){fuelList.splice(i,1);continue;}
+    if(Math.abs(f.d-ST.dist)<2.0&&Math.abs(ST.px-LANES[f.lane])<1.4&&ST.carY<2.5){
+      fuelList.splice(i,1);ST.fuel=Math.min(100,ST.fuel+FUEL_TANK);ST.fuelOut=false;if(ST.fuel>=20)ST.fuelWarn=false;
+      toast('Combustível!','+'+FUEL_TANK+'%');blip(330,660,0.15,'triangle',0.09);
     }
   }
   for(let i=wrenchList.length-1;i>=0;i--){

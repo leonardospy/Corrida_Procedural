@@ -8,7 +8,7 @@ import {I,flushInstances,hasLamp,placeTile,setI,updateWalkers} from './track.js'
 import {coverAt,roadY,underNear} from './tunnels.js';
 import {show} from './showroom.js';
 import {blob,car,dizzy} from './player.js';
-import {coinList,obstacles,wrenchList} from './state.js';
+import {coinList,fuelList,obstacles,wrenchList} from './state.js';
 import {animCar,updateDebris,updateDust,updateSmoke} from './effects.js';
 
 /* ------------------------------------------------------------------ */
@@ -78,6 +78,12 @@ export function updateWorld(dt,now){
     setI(I.wrench,wn++,LANES[w.lane],1.4+Math.sin(now*0.004+w.d)*0.1,-w.d,0.85,0.85,0.85,now*0.003);
   }
   I.wrench.count=wn;I.wrench.instanceMatrix.needsUpdate=true;
+  let fn=0;
+  for(let i=0;i<fuelList.length&&fn<8;i++){
+    const f=fuelList[i];if(f.d>ST.dist+AHEAD)continue;
+    setI(I.fuel,fn++,LANES[f.lane],1.1+Math.sin(now*0.004+f.d)*0.1,-f.d,1,1,1,now*0.0025+f.d);
+  }
+  I.fuel.count=fn;I.fuel.instanceMatrix.needsUpdate=true;
   flushInstances();
   if(!inMenu)updateWalkers();
   updateDebris(dt);updateSmoke(dt);updateDust(dt);

@@ -64,3 +64,10 @@
 .blanes i.on{border-color:#fff;animation:sirenblink .35s steps(2) infinite}
 @keyframes sirenblink{0%{background:#d8263a}100%{background:#2050ff}}
 @media (prefers-reduced-motion:reduce){.blanes i.on{animation:none;background:#d8263a}}
+/* combustível: barra abaixo do casco; pisca em vermelho quando está acabando */
+.fuel{display:flex;align-items:center;gap:6px;margin-top:5px}
+.fuel em{font-style:normal;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-right:3px}
+.fuel div{width:92px;height:9px;border-radius:2px;background:rgba(255,244,226,.2);overflow:hidden;transform:skewX(-20deg)}
+.fuel i{display:block;height:100%;width:100%;transform-origin:left center;background:linear-gradient(90deg,#ff7a1a,#2ec4b6)}
+.fuel.low i{background:#d8263a;animation:blink .5s steps(2) infinite}
+@media (prefers-reduced-motion:reduce){.fuel.low i{animation:none}}

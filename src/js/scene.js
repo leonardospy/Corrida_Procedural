@@ -147,6 +147,7 @@ export const headPool=(function(){
 })();
 
 M.wrench=mk({vertexColors:true,emissive:0x2b5d72});
+M.fuel=mk({vertexColors:true,emissive:0x4a1010});
 /* túneis: montanha (cor da paleta), revestimento interno e estrutura da passagem subterrânea */
 M.hill=mk({color:0x7a6aa0,side:THREE.DoubleSide});
 /* carros importados de .glb: as peças finas (asa, retrovisor) precisam das duas faces */

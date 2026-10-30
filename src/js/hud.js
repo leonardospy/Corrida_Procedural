@@ -14,6 +14,7 @@ export function toast(t,s){
   $('toastT').textContent=t;$('toastS').textContent=s||'';
   toastEl.classList.remove('show');void toastEl.offsetWidth;toastEl.classList.add('show');
 }
+const fuelEl=$('fuel'),fuelBar=$('fuelBar');
 export function updateHp(){
   const pips=hpEl.querySelectorAll('i');
   pips.forEach((p,i)=>p.classList.toggle('off',i>=3-ST.hits));
@@ -27,6 +28,8 @@ export function hudUpdate(){
   elBar.style.transform='scaleX('+clamp((ST.speed-V0)/(ST.cur.vmax-V0),0,1).toFixed(3)+')';
   const lv=Math.floor(ST.dist/LEVEL_M)+1;if(lv!==ST.hLvl){ST.hLvl=lv;elLvl.textContent='Nível '+lv;}
   const st=Math.floor(ST.dist/ST.STAGE_M)%PAL.length;if(st!==ST.hStage){ST.hStage=st;elStage.textContent=PAL[st].name;}
+  const fp=Math.round(ST.fuel);
+  if(fp!==ST.hFuel){ST.hFuel=fp;fuelBar.style.transform='scaleX('+(fp/100).toFixed(2)+')';fuelEl.classList.toggle('low',fp<20);}
   const cf=ST.confuse>0;
   if(confEl.hidden===cf)confEl.hidden=!cf;
   if(cf)confBar.style.transform='scaleX('+clamp(ST.confuse/CONFUSE_T,0,1).toFixed(3)+')';

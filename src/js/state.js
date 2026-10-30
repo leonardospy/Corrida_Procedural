@@ -12,4 +12,5 @@ ST.airborne=false;ST.hop=false;ST.carPitch=0;ST.rampY=0;ST.jumpD0=0;
 export const GJ=26;
 ST.hits=0;ST.inv=0;ST.confuse=0;ST.deathCause='hit';ST.runSaved=true;
 ST.lastLevel=1;ST.lastStage=0;ST.gantryNext=LEVEL_M;ST.spin=0;ST.menuK=1;ST.smokeAcc=0;
-export const obstacles=[], coinList=[], wrenchList=[], pools={};
+export const obstacles=[], coinList=[], wrenchList=[], fuelList=[], pools={};
+ST.fuel=100;   /* combustível de 0 a 100 */

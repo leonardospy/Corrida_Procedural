@@ -6,14 +6,14 @@ import {makeBeacon} from './geometry.js';
 import {OB} from './obstacles.js';
 import {cityCore,cityK,desertAt,isX} from './track.js';
 import {bossClear} from './boss.js';
-import {GJ,coinList,obstacles,pools,wrenchList} from './state.js';
+import {GJ,coinList,fuelList,obstacles,pools,wrenchList} from './state.js';
 import {busyAt,underOf} from './tunnels.js';
 
 /* ------------------------------------------------------------------ */
 /* Gerador procedural                                                  */
 /* ------------------------------------------------------------------ */
-export const gen={z:90,safe:1,chic:0,pedZ:260,rampZ:340,wrZ:430,force:-1,end:0,xi:0,anZ:260,hist:[],lastD:[-1e9,-1e9,-1e9],wz:null,wzNext:560,wzQ:[],zebra:new Set()};
-export function resetGen(){gen.z=90;gen.safe=1;gen.chic=0;gen.pedZ=260;gen.rampZ=340;gen.wrZ=430;gen.force=-1;gen.end=0;gen.xi=0;gen.anZ=260;gen.hist=[];gen.lastD=[-1e9,-1e9,-1e9];gen.wz=null;gen.wzNext=520+Math.random()*280;gen.wzQ=[];gen.zebra=new Set();}
+export const gen={z:90,safe:1,chic:0,pedZ:260,rampZ:340,wrZ:430,fuelZ:300,force:-1,end:0,xi:0,anZ:260,hist:[],lastD:[-1e9,-1e9,-1e9],wz:null,wzNext:560,wzQ:[],zebra:new Set()};
+export function resetGen(){gen.z=90;gen.safe=1;gen.chic=0;gen.pedZ=260;gen.rampZ=340;gen.wrZ=430;gen.fuelZ=300;gen.force=-1;gen.end=0;gen.xi=0;gen.anZ=260;gen.hist=[];gen.lastD=[-1e9,-1e9,-1e9];gen.wz=null;gen.wzNext=520+Math.random()*280;gen.wzQ=[];gen.zebra=new Set();}
 /* ninguém atravessa ninguém: carros seguem o da frente e quem cruza a pista espera a vez */
 const solid=p=>!p.hit&&p.kind!=='deco'&&p.mesh.visible;
 /* até onde um carro da via pode avançar sem encostar no que está à frente dele */
@@ -235,7 +235,7 @@ export function genRow(){
   }
   const info=[],movers=[],taken={};
   const p=inX?0:clamp((inChic?0.92:0.2+0.55*t)*cfg.dens,0,0.97);
-  let hz=0,placed=0;
+  let hz=0,placed=0,holed=false;
   for(let l=0;l<3;l++){
     if(l===safe)continue;
     if(zA&&l===zA.l)continue;
@@ -244,7 +244,8 @@ export function genRow(){
       hz=Math.max(hz,OB.ramp.hz);placed++;gen.force=l;gen.rampZ=d+300+Math.random()*260;
       continue;
     }
-    if(desert&&Math.random()<p*0.55){
+    if(desert&&!holed&&Math.random()<p*0.18){
+      holed=true;
       /* buraco parado na via */
       spawn('hole',d,LANES[l]+(Math.random()-0.5)*0.6,Math.random()*6.28);gen.lastD[l]=d+OB.hole.hz;
       hz=Math.max(hz,OB.hole.hz);placed++;info[l]=OB.hole.hz;continue;
@@ -285,6 +286,8 @@ export function genRow(){
     }
   }
   /* chave inglesa: sempre em ponto arriscado, logo antes de um obstáculo (exige desviar em cima da hora) */
+  /* tanque de combustível: no meio do vão entre fileiras, de 450 a 750 m */
+  if(d>=gen.fuelZ&&gap>18){fuelList.push({d:d+gap*0.5,lane:Math.random()<0.6?safe:((Math.random()*3)|0)});gen.fuelZ=d+450+Math.random()*300;}
   if(d>=gen.wrZ){
     const ls=[0,1,2].filter(function(l){return info[l]!==undefined;});
     if(ls.length){

@@ -24,6 +24,8 @@ const warn=new THREE.Mesh(new THREE.PlaneGeometry(3,34),warnMat);warn.rotation.x
 const B={i:-1,phase:'idle',t:0,d:0,x:0,lane:1,tx:0,laneT:0,dropT:0,hitDone:false,vx:0,spin:0,y:0,vy:0};
 const el={box:$('boss'),name:$('bossName'),bar:$('bossBar'),lanes:$('bossLanes')};
 
+/* batalha em andamento (ou pista limpa para ela): o combustível não é gasto */
+export function bossActive(){return B.phase!=='idle'||bossClear(ST.dist);}
 export function resetBoss(){
   B.i=-1;B.phase='idle';cop.g.visible=false;warn.visible=false;el.box.hidden=true;sirenLevel(0);musicOn(false);
 }
