@@ -39,6 +39,8 @@ export const LEVEL_M=500;
 ST.STAGE_M=Math.max(100,cfg.stage);
 export const MAXC=80, NDEB=28, NSM=36, NDUST=70;
 export const SHOW_Z=600;                   // posição do showroom, longe da pista
+/* distância que um tanque cheio de combustível aguenta (m); a cada 1/3 dela aparece um galão */
+export const FUEL_RANGE=2000;
 export const CONFUSE_T=6;
 export const diff=d=>1-Math.exp(-d/2600);
 export const speedAt=d=>V0+(VW-V0)*(1-Math.exp(-d*cfg.spd/6500));

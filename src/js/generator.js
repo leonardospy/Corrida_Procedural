@@ -1,6 +1,6 @@
 /* Gerador procedural de obstáculos, moedas e cruzamentos */
 import {ST} from './shared.js';
-import {AHEAD,L,LANES,MAXC,cfg,clamp,diff,lerp,speedAt} from './config.js';
+import {AHEAD,FUEL_RANGE,L,LANES,MAXC,cfg,clamp,diff,lerp,speedAt} from './config.js';
 import {M,scene} from './scene.js';
 import {makeBeacon} from './geometry.js';
 import {OB} from './obstacles.js';
@@ -12,11 +12,23 @@ import {busyAt,underOf} from './tunnels.js';
 /* ------------------------------------------------------------------ */
 /* Gerador procedural                                                  */
 /* ------------------------------------------------------------------ */
-export const gen={z:90,safe:1,chic:0,pedZ:260,rampZ:340,wrZ:430,fuelZ:300,force:-1,end:0,xi:0,anZ:260,hist:[],lastD:[-1e9,-1e9,-1e9],wz:null,wzNext:560,wzQ:[],zebra:new Set()};
-export function resetGen(){gen.z=90;gen.safe=1;gen.chic=0;gen.pedZ=260;gen.rampZ=340;gen.wrZ=430;gen.fuelZ=300;gen.force=-1;gen.end=0;gen.xi=0;gen.anZ=260;gen.hist=[];gen.lastD=[-1e9,-1e9,-1e9];gen.wz=null;gen.wzNext=520+Math.random()*280;gen.wzQ=[];gen.zebra=new Set();}
+export const gen={z:90,safe:1,chic:0,pedZ:260,rampZ:340,wrZ:430,fuelZ:FUEL_RANGE/3,force:-1,end:0,xi:0,anZ:260,hist:[],lastD:[-1e9,-1e9,-1e9],wz:null,wzNext:560,wzQ:[],zebra:new Set()};
+export function resetGen(){gen.z=90;gen.safe=1;gen.chic=0;gen.pedZ=260;gen.rampZ=340;gen.wrZ=430;gen.fuelZ=FUEL_RANGE/3;gen.force=-1;gen.end=0;gen.xi=0;gen.anZ=260;gen.hist=[];gen.lastD=[-1e9,-1e9,-1e9];gen.wz=null;gen.wzNext=520+Math.random()*280;gen.wzQ=[];gen.zebra=new Set();}
 /* ninguém atravessa ninguém: carros seguem o da frente e quem cruza a pista espera a vez */
 const solid=p=>!p.hit&&p.kind!=='deco'&&p.mesh.visible;
 /* até onde um carro da via pode avançar sem encostar no que está à frente dele */
+/* itens coletáveis (moedas, galões, chaves) não se sobrepõem, não ficam lado a lado e não caem na via em obras */
+function laneBusy(d0,d1,lane){
+  const x=LANES[lane],near=it=>it.lane===lane&&it.d>d0-3.5&&it.d<d1+3.5;
+  if(gen.wz&&lane===gen.wz.l&&d1>gen.wz.zs-50&&d0<gen.wz.ze+12)return true;   /* estrada destruída */
+  if(coinList.some(near)||fuelList.some(near)||wrenchList.some(near))return true;
+  return obstacles.some(o=>!o.mv&&!o.walk&&o.kind!=='ped'&&Math.abs(o.x-x)<1.6&&o.d+o.hz>d0-2&&o.d-o.hz<d1+2);
+}
+function sideBusy(d0,d1,lane){
+  const side=it=>it.lane!==lane&&it.d>d0-6&&it.d<d1+6;
+  return coinList.some(side)||fuelList.some(side);
+}
+const freeLane=(d0,d1,order)=>order.find(l=>!laneBusy(d0,d1,l)&&!sideBusy(d0,d1,l));
 export function leaderLimit(o){
   let lim=Infinity;
   for(let n=0;n<obstacles.length;n++){
@@ -274,25 +286,32 @@ export function genRow(){
   if(!placed)gap=Math.max(16,gap*0.55);
   /* moedas: linha longa numa via qualquer, na faixa livre entre fileiras */
   if(gap>22&&Math.random()<0.95){
-    const cl=Math.random()<0.6?safe:((Math.random()*3)|0);
-    for(let k=0;k<7;k++){const cd=d+hz+3+k*2.6;if(cd<d+gap*0.55&&coinList.length<MAXC)coinList.push({d:cd,lane:cl});}
+    const c0=d+hz+3,c1=Math.min(c0+6*2.6,d+gap*0.55),first=Math.random()<0.6?safe:((Math.random()*3)|0);
+    const cl=freeLane(c0,c1,[first,0,1,2].filter((l,i,a)=>a.indexOf(l)===i));
+    if(cl!==undefined)for(let k=0;k<7;k++){const cd=c0+k*2.6;if(cd<=c1&&coinList.length<MAXC)coinList.push({d:cd,lane:cl});}
   }
   /* moedas em arco sobre a rampa */
   if(rampLane>=0){
     const vy=7.4+0.02*v, T=(vy+Math.sqrt(vy*vy+2*GJ*1.05))/GJ;
+    if(!sideBusy(d,d+v*T,rampLane))
     for(let k=1;k<=5;k++){
       const tt=T*k/6;
       if(coinList.length<MAXC)coinList.push({d:d-0.4+v*tt,lane:rampLane,y:2.1+vy*tt-0.5*GJ*tt*tt});
     }
   }
   /* chave inglesa: sempre em ponto arriscado, logo antes de um obstáculo (exige desviar em cima da hora) */
-  /* tanque de combustível: no meio do vão entre fileiras, de 450 a 750 m */
-  if(d>=gen.fuelZ&&gap>18){fuelList.push({d:d+gap*0.5,lane:Math.random()<0.6?safe:((Math.random()*3)|0)});gen.fuelZ=d+450+Math.random()*300;}
+  /* galão de combustível: um a cada 1/3 do alcance do tanque, no vão entre fileiras, numa via sem moedas nem obras */
+  if(d>=gen.fuelZ){
+    for(let k=0,fd=d+gap*0.5;k<5;k++,fd+=5){
+      const l=freeLane(fd-1,fd+1,[safe,0,1,2].filter((x,i,a)=>a.indexOf(x)===i));
+      if(l!==undefined){fuelList.push({d:fd,lane:l});gen.fuelZ=Math.max(gen.fuelZ+FUEL_RANGE/3,d+200);break;}
+    }
+  }
   if(d>=gen.wrZ){
     const ls=[0,1,2].filter(function(l){return info[l]!==undefined;});
     if(ls.length){
       const l=ls[(Math.random()*ls.length)|0], dw=d-info[l]-7.5;
-      if(dw>gen.end+2){wrenchList.push({d:dw,lane:l});gen.wrZ=d+520+Math.random()*420;}
+      if(dw>gen.end+2&&!laneBusy(dw-1,dw+1,l)){wrenchList.push({d:dw,lane:l});gen.wrZ=d+520+Math.random()*420;}
     }
   }
   /* pedestres: raros, com distância mínima entre eles e fora da via livre */

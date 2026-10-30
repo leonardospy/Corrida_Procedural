@@ -1,6 +1,6 @@
 /* Física da corrida: movimento, colisões, saltos e coleta */
 import {ST} from './shared.js';
-import {AHEAD,L,LANES,LEVEL_M,clamp,fmt,lerp,speedAt} from './config.js';
+import {AHEAD,FUEL_RANGE,L,LANES,LEVEL_M,clamp,fmt,lerp,speedAt} from './config.js';
 import {PAL} from './scene.js';
 import {drawSign,gantries} from './obstacles.js';
 import {updateProps} from './scenery.js';
@@ -15,7 +15,7 @@ import {toast,updateHp} from './hud.js';
 import {gameOver,hitObstacle} from './race.js';
 
 /* combustível: 100% dura uns 2 km; na batalha contra o chefe não gasta */
-const FUEL_PER_M=100/2000, FUEL_TANK=30;
+const FUEL_PER_M=100/FUEL_RANGE, FUEL_TANK=34;   /* cada galão devolve 1/3 da barra */
 export function updatePlay(dt,now){
   const target=Math.min(speedAt(ST.dist),ST.cur.vmax);
   if(ST.fuel>0)ST.speed=Math.min(target,ST.speed+ST.cur.accel*dt);
